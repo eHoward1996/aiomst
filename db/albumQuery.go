@@ -116,24 +116,36 @@ func (s *SqlBackend) DeleteAlbum(a *Album) error {
 }
 
 // LoadAlbum loads an Album from the database, populating the parameter struct
-func (s *SqlBackend) LoadAlbum(a *Album) error {
+func (s *SqlBackend) LoadAlbum(a *Album) (Album, error) {
 	// Load the album via ID if available
 	if a.ID != 0 {
-		if err := s.db.Get(a, "SELECT albums.*,artists.title AS artist FROM albums "+
-			"JOIN artists ON albums.artist_id = artists.id WHERE albums.id = ?;", a.ID); err != nil {
-			return err
-		}
+		albums, err := s.albumQuery(
+			"SELECT albums.*,artists.title AS artist FROM albums " +
+			"JOIN artists ON albums.artist_id = artists.id WHERE albums.id = ?;",
+			a.ID)
 
-		return nil
+		if err != nil {
+			return Album{}, err
+		} else if len(albums) == 1 {
+			return albums[0], nil
+		} else {
+			return Album{}, nil
+		}
 	}
 
 	// Load via artist ID and title
-	if err := s.db.Get(a, "SELECT albums.*,artists.title AS artist FROM albums "+
-		"JOIN artists ON albums.artist_id = artists.id WHERE albums.artist_id = ? AND albums.title = ?;", a.ArtistID, a.Title); err != nil {
-		return err
+	albums, err := s.albumQuery(
+		"SELECT albums.*,artists.title AS artist FROM albums " +
+		"JOIN artists ON albums.artist_id = artists.id WHERE albums.artist_id = ? " +
+		"AND albums.title = ?;", a.ArtistID, a.Title)
+	
+	if err != nil {
+		return Album{}, err
+	} else if len(albums) == 1 {
+		return albums[0], nil
+	} else {
+		return Album{}, nil
 	}
-
-	return nil
 }
 
 // SaveAlbum attempts to save an Album to the database
@@ -150,7 +162,7 @@ func (s *SqlBackend) SaveAlbum(a *Album) error {
 
 	// If no ID, reload to grab it
 	if a.ID == 0 {
-		if err := s.LoadAlbum(a); err != nil {
+		if _, err := s.LoadAlbum(a); err != nil {
 			return err
 		}
 	}

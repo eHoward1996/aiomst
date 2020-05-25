@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/nicksellen/audiotags"
+	"github.com/eHoward1996/audiotags"
 	"github.com/wtolson/go-taglib"
 )
 
@@ -154,7 +154,7 @@ func (s *Song) Delete() error {
 }
 
 // Load pulls an existing Song from the database
-func (s *Song) Load() error {
+func (s *Song) Load() (Song, error) {
 	return DB.LoadSong(s)
 }
 

@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	hostPort = flag.String("host", ":8080", "The port to bind to.")
+	hostPort = flag.String("host", ":8090", "The port to bind to.")
 	driveLoc = flag.String("media", "~/MediaDrive/Media/Music", "The path to the media folder.")
 	sqlDBLoc = flag.String("sqlite", "~/MediaDrive/Media/mediadb.db", "The sql db location.")
 )

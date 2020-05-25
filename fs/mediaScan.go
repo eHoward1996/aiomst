@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"aiomst/db"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -12,8 +13,6 @@ import (
 	"strconv"
 	"sync"
 	"time"
-
-	"aiomst/db"
 )
 
 // Cache repetitive entries
@@ -266,7 +265,7 @@ func handleArtist(song *db.Song) (*db.Artist, int) {
 	artist := db.ArtistFromSong(song)
 	if tempArtist, ok := artistCache[artist.Title]; ok {
 		artist = tempArtist
-	} else if err := artist.Load(); err == sql.ErrNoRows {
+	} else if _, err := artist.Load(); err == sql.ErrNoRows {
 		if err := artist.Save(); err != nil {
 			log.Printf("FS: Media Scan: Handle Artist: %v", err)
 		} else if err == nil {
@@ -284,15 +283,18 @@ func handleAlbum(song *db.Song) (*db.Album, int) {
 	album := db.AlbumFromSong(song)
 	album.ArtistID = song.ArtistID
 	albumCacheKey := strconv.Itoa(album.ArtistID) + "_" + album.Title
+	
 	if temp, ok := albumCache[albumCacheKey]; ok {
 		album = temp
-	} else if err := album.Load(); err == sql.ErrNoRows {
+	} else if _, err := album.Load(); err == sql.ErrNoRows {
 		if err := album.Save(); err != nil {
 			log.Printf("FS: Media Scan: Handle Album: %v", err)
 		} else if err == nil {
 			log.Printf("FS: Media Scan: Album: [#%05d] %s - %d - %s", album.ID, album.Artist, album.Year, album.Title)
 			count++
 		}
+	} else if err != nil {
+		log.Printf("FS: Media Scan: %s", err)
 	}
 	
 	albumCache[albumCacheKey] = album
@@ -306,7 +308,7 @@ func checkForModification(origin *db.Song) (int, int)	{
 	song2.FileName = origin.FileName
 
 	// Check if the song exists
-	if err := song2.Load(); err == sql.ErrNoRows {
+	if _, err := song2.Load(); err == sql.ErrNoRows {
 		// The song didn't save. So do that...
 		if err2 := origin.Save(); err2 != nil && err2 != sql.ErrNoRows {
 			log.Println(err2)

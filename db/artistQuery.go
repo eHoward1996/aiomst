@@ -76,22 +76,28 @@ func (s *SqlBackend) DeleteArtist(a *Artist) error {
 }
 
 // LoadArtist loads an Artist from the database, populating the parameter struct
-func (s *SqlBackend) LoadArtist(a *Artist) error {
+func (s *SqlBackend) LoadArtist(a *Artist) (Artist, error) {
 	// Load the artist via ID if available
 	if a.ID != 0 {
-		if err := s.db.Get(a, "SELECT * FROM artists WHERE id = ?;", a.ID); err != nil {
-			return err
+		artist, err := s.artistQuery("SELECT * FROM artist WHERE id = ?", a.ID)
+		if err != nil {
+			return Artist{}, err
+		} else if len(artist) == 1 {
+			return artist[0], nil
+		} else {
+			return Artist{}, nil
 		}
-
-		return nil
 	}
 
 	// Load via title
-	if err := s.db.Get(a, "SELECT * FROM artists WHERE title = ?;", a.Title); err != nil {
-		return err
+	artist, err := s.artistQuery("SELECT * FROM artists WHERE title = ?;", a.Title)
+	if err != nil {
+		return Artist{}, err
+	} else if len(artist) == 1 {
+		return artist[0], nil
+	} else {
+		return Artist{}, nil
 	}
-
-	return nil
 }
 
 // SaveArtist attempts to save an Artist to the database
@@ -108,7 +114,7 @@ func (s *SqlBackend) SaveArtist(a *Artist) error {
 
 	// If no ID, reload to grab it
 	if a.ID == 0 {
-		if err := s.LoadArtist(a); err != nil {
+		if _, err := s.LoadArtist(a); err != nil {
 			return err
 		}
 	}

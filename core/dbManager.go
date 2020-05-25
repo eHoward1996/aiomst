@@ -1,18 +1,17 @@
 package core
 
 import (
+	"aiomst/db"
+	"aiomst/util"
 	"log"
 	"os"
-
-	"aiomst/util"
-	"aiomst/db"
 )
 
 func dbManager(conf util.Config, dbLaunchChan, dbKillChan chan struct{})	{
 	log.Print("DB MANAGER STARTED")
 
 	if conf.Sqlite == nil {
-		log.Fatalf("DB: invalid database file")
+		log.Fatalf("DB: Invalid database file")
 	}
 
 	path := conf.SqlFilePath()

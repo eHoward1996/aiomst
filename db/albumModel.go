@@ -25,7 +25,7 @@ func (a *Album) Delete() error {
 }
 
 // Load pulls an existing Album from the database
-func (a *Album) Load() error {
+func (a *Album) Load() (Album, error) {
 	return DB.LoadAlbum(a)
 }
 

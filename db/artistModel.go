@@ -21,7 +21,7 @@ func (a *Artist) Delete() error {
 }
 
 // Load pulls an existing Artist from the database
-func (a *Artist) Load() error {
+func (a *Artist) Load() (Artist, error) {
 	return DB.LoadArtist(a)
 }
 

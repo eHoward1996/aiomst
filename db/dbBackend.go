@@ -1,15 +1,14 @@
 package db
 
 import (
+	"aiomst/util"
 	"log"
 	"os"
 	"path"
-	
-	"aiomst/util"
-
-	"github.com/jmoiron/sqlx"
 
 	// Include the sqlite3 driver
+
+	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -57,50 +56,7 @@ func (s *SqlBackend) Setup()	error {
 		return err
 	}
 
-	initSchema := `CREATE TABLE IF NOT EXISTS albums (
-		id         INTEGER PRIMARY KEY,
-		artist_id  VARCHAR(80),
-		title      VARCHAR(250),
-		year       INTEGER
-	);
-	CREATE TABLE IF NOT EXISTS artists (
-		id         INTEGER PRIMARY KEY,
-		title      VARCHAR(250)
-	);
-	CREATE TABLE IF NOT EXISTS art (
-		id            INTEGER PRIMARY KEY,
-		file_name     VARCHAR(250),
-		file_size     INTEGER,
-		last_modified INTEGER
-	);
-	CREATE TABLE IF NOT EXISTS folders (
-		id            INTEGER PRIMARY KEY,
-		parent_id     VARCHAR(250),
-		title         VARCHAR(250),
-		path 					VARCHAR(250)
-	);
-	CREATE TABLE IF NOT EXISTS songs (
-		id 								INTEGER PRIMARY KEY,
-		album_id					INTEGER,
-		art_id 						INTEGER,
-		artist_id         INTEGER,
-		bitrate           INTEGER,
-		channels 					INTEGER,
-		comment           VARCHAR(250),
-		file_name  				VARCHAR(250),
-		file_size         INTEGER,
-		file_type_id      VARCHAR(80),
-		folder_id         INTEGER,
-		genre             VARCHAR(80),
-		last_modified     INTEGER,
-		length            INTEGER,
-		sample_rate       INTEGER,
-		title             VARCHAR(250),
-		track             INTEGER,
-		year              INTEGER
-	)
-	`
-
+	initSchema := getSchema()
 	database, _ := sqlx.Connect("sqlite3", s.Path)
 	if err != nil {
 		panic(err)

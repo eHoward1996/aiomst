@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"log"
 )
 
 // songQuery loads a slice of Song structs matching the input query
@@ -121,27 +120,36 @@ func (s *SqlBackend) DeleteSong(a *Song) error {
 }
 
 // LoadSong loads a Song from the database, populating the parameter struct
-func (s *SqlBackend) LoadSong(a *Song) error {
+func (s *SqlBackend) LoadSong(a *Song) (Song, error) {
 	// Load the song via ID if available
 	if a.ID != 0 {
-		log.Print("This 1")
-		if err := s.db.Get(a, "SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
+		songs, err := s.songQuery(
+			"SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
 			"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-			"WHERE songs.id = ?;", a.ID); err != nil {
-			return err
-		}
+			"WHERE songs.id = ?;", a.ID)
 
-		return nil
+		if err != nil {
+			return Song{}, err
+		} else if len(songs) == 1 {
+			return songs[0], nil
+		} else {
+			return Song{}, nil
+		}
 	}
 
 	// Load via file name
-	if err := s.db.Get(a, "SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
+	songs, err := s.songQuery(
+		"SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
 		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-		"WHERE songs.file_name = ?;", a.FileName); err != nil {
-		return err
-	}
+		"WHERE songs.file_name = ?;", a.FileName)
 
-	return nil
+	if err != nil {
+		return Song{}, err
+	} else if len(songs) == 1 {
+		return songs[0], nil
+	} else {
+		return Song{}, nil
+	}
 }
 
 // SaveSong attempts to save a Song to the database
@@ -161,7 +169,7 @@ func (s *SqlBackend) SaveSong(a *Song) error {
 
 	// If no ID, reload to grab it
 	if a.ID == 0 {
-		if err := s.LoadSong(a); err != nil {
+		if _, err := s.LoadSong(a); err != nil {
 			return err
 		}
 	}
