@@ -2,21 +2,23 @@ package core
 
 import (
 	"aiomst/api"
+	"aiomst/db"
 	"aiomst/util"
 	"fmt"
 	"log"
 	"net/http"
 	"runtime"
+	"strconv"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
-	// "github.com/mdlayher/wavepipe/api"
 )
 
 func apiManager(apikillChan chan struct{})	{
 	log.Print("API MANAGER STARTED")
 	gracefulChan := make(chan struct{}, 0)
 
+	gin.SetMode(gin.ReleaseMode)
 	// Initialize Gin (api router)
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -29,12 +31,26 @@ func apiManager(apikillChan chan struct{})	{
 		c.Next()
 		return
 	})
-
+	
 	r.GET("/", func(c *gin.Context) {c.String(http.StatusOK, "pong")})
 	r.GET("/albums", api.GetAlbums)
 	r.GET("/artists", api.GetArtist)
 	r.GET("/songs", api.GetSongs)
 	r.GET("/search", api.GetSearch)
+
+	imgFiles, err := db.DB.AllArt()
+	if err != nil || len(imgFiles) == 0 {
+		log.Printf("API: Couldn't get Art files: %s", err)
+	}
+
+	imgRoute := r.Group("/art")
+	{
+		for _, art := range imgFiles {
+			id := strconv.Itoa(art.ID)
+			imgRoute.StaticFile(id, art.FileName)
+		}
+	}
+
 	sConf := util.LoadConfig()
 	server := &http.Server{
 		Addr:    sConf.Host,
