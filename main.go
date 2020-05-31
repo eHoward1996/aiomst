@@ -1,13 +1,13 @@
 package main
 
-import(
+import (
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"aiomst/util"
 	"aiomst/core"
+	"aiomst/util"
 )
 
 func main()	{
@@ -32,10 +32,16 @@ func main()	{
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	// for sig := range sigChan {
+	// 	log.Println("AIOMST: caught signal: ", sig)
+	// 	killChan <- struct{}{}
+	// 	break
+	// }
 
 	go func()	{
 		for sig := range sigChan {
-			log.Println("AIOMST caught signal: ", sig, "... force halting")
+			log.Printf("AIOMST caught signal: %v... force halting", sig)
+			killChan <- struct{}{}
 			os.Exit(1)
 		}
 	}()
