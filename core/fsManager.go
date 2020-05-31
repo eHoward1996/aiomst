@@ -2,11 +2,11 @@ package core
 
 import (
 	// "errors"
+	"aiomst/fs"
+	"aiomst/util"
 	"log"
 	"time"
 
-	"aiomst/fs"
-	"aiomst/util"
 	"github.com/radovskyb/watcher"
 )
 
@@ -19,7 +19,7 @@ var fsTaskCount = 0
 // Initialize a queue to cancel filesystem tasks
 var cancelQueue = make(chan chan struct{}, 10)
 
-func fsManager(mediaPath string, fsKillChan chan struct{})	{
+func fsManager(mediaPath string, fsLaunchChan, fsKillChan chan struct{})	{
 	log.Println("FS MANAGER STARTED")
 
 	// Initialize filesystem watcher
@@ -37,13 +37,13 @@ func fsManager(mediaPath string, fsKillChan chan struct{})	{
 	fsTaskQueue <- m
 
 
-	go handleFSTasks(watcherChan)
+	go handleFSTasks(fsLaunchChan, watcherChan)
 	go handleFSEvents(watcherChan)
 	fsWatchKillSig(fsKillChan)
 }
 
 // Handle fs tasks in goroutine so they can be halted by the Task Manager
-func handleFSTasks(watcherChan chan struct{}) {
+func handleFSTasks(fsLaunchChan, watcherChan chan struct{}) {
 	for {
 		select {
 		case task := <- fsTaskQueue:
@@ -57,7 +57,7 @@ func handleFSTasks(watcherChan chan struct{}) {
 			
 			changes, err := task.Scan(baseFolder, subFolder, cancelChan)
 			if err != nil	{
-				log.Print(err)
+				log.Printf("FS: Task Errored: %v", err)
 			}
 
 			if changes > 0 {
@@ -72,6 +72,7 @@ func handleFSTasks(watcherChan chan struct{}) {
 			if fsTaskCount == 2 {
 				log.Print("FS: Finished initial media and orphan scans")
 				close(watcherChan)
+				close(fsLaunchChan)
 			}
 		}
 	}

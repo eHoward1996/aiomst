@@ -1,8 +1,8 @@
 package core
 
 import (
-	"log"
 	"aiomst/util"
+	"log"
 )
 
 var dbKillChan, fsKillChan chan struct{}
@@ -17,11 +17,12 @@ func TaskManager(killChan chan struct{}, exitChan chan int)	{
 	dbLaunchFinishChan := make(chan struct{})
 	dbKillChan         = make(chan struct{})
 	go dbManager(config, dbLaunchFinishChan, dbKillChan)
-
 	<- dbLaunchFinishChan
 
 	fsKillChan := make(chan struct{})
-	go fsManager(config.MediaFolderPath(), fsKillChan)
+	fsLaunchFinishChan := make(chan struct{})
+	go fsManager(config.MediaFolderPath(), fsLaunchFinishChan, fsKillChan)
+	<- fsLaunchFinishChan 
 
 	apiKillChan := make(chan struct{})
 	go apiManager(apiKillChan)
