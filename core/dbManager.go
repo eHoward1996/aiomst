@@ -20,7 +20,7 @@ func dbManager(conf util.Config, dbLaunchChan, dbKillChan chan struct{})	{
 
 	// Setup the db
 	if err := db.DB.Setup(); err != nil 	{
-		log.Fatalf("DB: Could not set up database: %s", err.Error())
+		log.Fatalf("DB: Could not set up database: %s", err)
 	}
 
 	// Verify DB file exists 
