@@ -11,7 +11,7 @@ import (
 )
 
 type ArtistResponse struct {
-	Artist  	db.Artist 		`json:"artist"`
+	Artists  	[]db.Artist		`json:"artists"`
 	Albums		[]db.Album 		`json:"albums"`
 	Songs 		[]db.Song  		`json:"songs"`
 }
@@ -50,7 +50,7 @@ func handleArtistID(sID string, c *gin.Context)	{
 	}
 
 	resp := new(ArtistResponse)
-	resp.Artist = a
+	resp.Artists = []db.Artist{a}
 
 	albums, err := db.DB.AlbumsForArtist(artist.ID)
 	if err != nil {
@@ -96,6 +96,11 @@ func handleArtistNoID(c *gin.Context)	{
 		c.JSON(500, ErrGeneric)
 		return
 	}
-	c.IndentedJSON(200, artists)
+
+	resp := new(ArtistResponse)
+	resp.Artists = artists
+	resp.Albums = []db.Album{}
+	resp.Songs = []db.Song{}
+	c.IndentedJSON(200, resp)
 	return
 }

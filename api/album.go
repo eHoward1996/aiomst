@@ -8,11 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AlbumResponse is what is returned to the frontend.
 type AlbumResponse struct {
-	Album  db.Album   `json:"album"`
+	Albums []db.Album `json:"albums"`
 	Songs  []db.Song  `json:"songs"`
 }
 
+// GetAlbums is the function called when a user accesses /albums on the frontend.
 func GetAlbums(c *gin.Context)	{
 	c.Header("Content-Type", "application/json; charset=UTF-8")
 	c.Header("Access-Control-Allow-Origin", "*")
@@ -43,7 +45,7 @@ func handleAlbumID(sID string, c *gin.Context)	{
 	}
 
 	resp := new(AlbumResponse)
-	resp.Album = a
+	resp.Albums = []db.Album{a}
 
 	songs, err := db.DB.SongsForAlbum(album.ID)
 	if err != nil {
@@ -61,9 +63,13 @@ func handleAlbumNoID(c *gin.Context)	{
 	albums, err := db.DB.AllAlbums()
 	if err != nil {
 		log.Print(err)
-		c.JSON(200, ErrGeneric)
+		c.JSON(500, ErrGeneric)
 		return
 	}
-	c.IndentedJSON(200, albums)
+
+	resp := new(AlbumResponse)
+	resp.Albums = albums
+	resp.Songs = []db.Song{}
+	c.IndentedJSON(200, resp)
 	return
 }
