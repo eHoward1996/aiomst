@@ -34,6 +34,11 @@ func (s *SqlBackend) artQuery(query string, args ...interface{}) ([]Art, error) 
 	return art, nil
 }
 
+// AllArt returns a slice of All Art structs
+func (s *SqlBackend) AllArt() ([]Art, error)	{
+	return s.artQuery("SELECT * FROM art;")
+}
+
 // ArtInPath loads a slice of all Art structs contained within the specified file path
 func (s *SqlBackend) ArtInPath(path string) ([]Art, error) {
 	return s.artQuery("SELECT * FROM art WHERE file_name LIKE ?;", path+"%")
@@ -61,22 +66,21 @@ func (s *SqlBackend) DeleteArt(a *Art) error {
 }
 
 // LoadArt loads Art from the database, populating the parameter struct
-func (s *SqlBackend) LoadArt(a *Art) error {
+func (s *SqlBackend) LoadArt(a *Art) (Art, error) {
 	// Load the artist via ID if available
+	r := *a
 	if a.ID != 0 {
-		if err := s.db.Get(a, "SELECT * FROM art WHERE id = ?;", a.ID); err != nil {
-			return err
+		if err := s.db.Get(&r, "SELECT * FROM art WHERE id = ?;", a.ID); err != nil {
+			return Art{}, err
 		}
-
-		return nil
+		return r, nil
 	}
 
 	// Load via file name
-	if err := s.db.Get(a, "SELECT * FROM art WHERE file_name = ?;", a.FileName); err != nil {
-		return err
+	if err := s.db.Get(&r, "SELECT * FROM art WHERE file_name = ?;", a.FileName); err != nil {
+		return Art{}, err
 	}
-
-	return nil
+	return r, nil
 }
 
 // SaveArt attempts to save Art to the database
@@ -93,10 +97,11 @@ func (s *SqlBackend) SaveArt(a *Art) error {
 
 	// If no ID, reload to grab it
 	if a.ID == 0 {
-		if err := s.LoadArt(a); err != nil {
+		art, err := s.LoadArt(a)
+		if err != nil {
 			return err
 		}
+		*a = art
 	}
-
 	return nil
 }

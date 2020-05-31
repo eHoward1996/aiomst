@@ -122,45 +122,43 @@ func (s *SqlBackend) DeleteSong(a *Song) error {
 // LoadSong loads a Song from the database, populating the parameter struct
 func (s *SqlBackend) LoadSong(a *Song) (Song, error) {
 	// Load the song via ID if available
+	r := *a
 	if a.ID != 0 {
-		songs, err := s.songQuery(
-			"SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
-			"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-			"WHERE songs.id = ?;", a.ID)
-
-		if err != nil {
+		if err := s.db.Get(
+			&r, 
+			"SELECT songs.*, artists.title AS artist, albums.title AS album FROM songs "+
+			"JOIN artists ON songs.artist_id = artists.id " +
+			"JOIN albums ON songs.album_id = albums.id WHERE songs.id = ?;", a.ID);
+		err != nil {
 			return Song{}, err
-		} else if len(songs) == 1 {
-			return songs[0], nil
-		} else {
-			return Song{}, nil
 		}
+		return r, nil
 	}
 
 	// Load via file name
-	songs, err := s.songQuery(
-		"SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
+	if err := s.db.Get(
+		&r,
+		"SELECT songs.*, artists.title AS artist, albums.title AS album FROM songs "+
 		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-		"WHERE songs.file_name = ?;", a.FileName)
-
-	if err != nil {
+		"WHERE songs.file_name = ?;", a.FileName);
+	err != nil {
 		return Song{}, err
-	} else if len(songs) == 1 {
-		return songs[0], nil
-	} else {
-		return Song{}, nil
 	}
+	return r, nil
 }
 
 // SaveSong attempts to save a Song to the database
 func (s *SqlBackend) SaveSong(a *Song) error {
 	// Insert new song
-	query := "INSERT INTO songs (`album_id`, `art_id`, `artist_id`, `bitrate`, `channels`, `comment`, `file_name`, " +
-		"`file_size`, `file_type_id`, `folder_id`, `genre`, `last_modified`, `length`, `sample_rate`, `title`, `track`, `year`) " +
-		" VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
+	query := "INSERT INTO songs (album_id, artist_id, bitrate, " + 
+		"channels, comment, file_name, file_size, file_type_id, " +
+		"folder_id, genre, last_modified, length, sample_rate, " + 
+		"title, track, year) " +
+		"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
 	tx := s.db.MustBegin()
-	tx.Exec(query, a.AlbumID, a.ArtID, a.ArtistID, a.Bitrate, a.Channels, a.Comment, a.FileName, a.FileSize, a.FileTypeID,
-		a.FolderID, a.Genre, a.LastModified, a.Length, a.SampleRate, a.Title, a.Track, a.Year)
+	tx.Exec(query, a.AlbumID, a.ArtistID, a.Bitrate, a.Channels, a.Comment, 
+		a.FileName, a.FileSize, a.FileTypeID,	a.FolderID, a.Genre, a.LastModified,
+		a.Length, a.SampleRate, a.Title, a.Track, a.Year)
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
@@ -169,22 +167,23 @@ func (s *SqlBackend) SaveSong(a *Song) error {
 
 	// If no ID, reload to grab it
 	if a.ID == 0 {
-		if _, err := s.LoadSong(a); err != nil {
+		song, err := s.LoadSong(a)
+		if err != nil {
 			return err
 		}
+		*a = song 
 	}
-
 	return nil
 }
 
 // UpdateSong attempts to update a Song in the database
 func (s *SqlBackend) UpdateSong(a *Song) error {
 	// Update existing song
-	query := "UPDATE songs SET `album_id` = ?, `art_id` = ?, `artist_id` = ?, `bitrate` = ?, `channels` = ?, `comment` = ?, " +
-		"`file_size` = ?, `folder_id` = ?,  `genre` = ?, `last_modified` = ?, `length` = ?, `sample_rate` = ?, " +
-		"`title` = ?, `track` = ?, `year` = ? WHERE `id` = ?;"
+	query := "UPDATE songs SET album_id = ?, artist_id = ?, bitrate = ?, channels = ?, comment = ?, " +
+		"file_size = ?, folder_id = ?,  genre = ?, last_modified = ?, length = ?, sample_rate = ?, " +
+		"title = ?, track = ?, year = ? WHERE id = ?;"
 	tx := s.db.MustBegin()
-	tx.Exec(query, a.AlbumID, a.ArtID, a.ArtistID, a.Bitrate, a.Channels, a.Comment, a.FileSize,
+	tx.Exec(query, a.AlbumID, a.ArtistID, a.Bitrate, a.Channels, a.Comment, a.FileSize,
 		a.FolderID, a.Genre, a.LastModified, a.Length, a.SampleRate, a.Title, a.Track, a.Year, a.ID)
 
 	// Commit transaction

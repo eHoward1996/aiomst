@@ -78,34 +78,29 @@ func (s *SqlBackend) DeleteArtist(a *Artist) error {
 // LoadArtist loads an Artist from the database, populating the parameter struct
 func (s *SqlBackend) LoadArtist(a *Artist) (Artist, error) {
 	// Load the artist via ID if available
+	r := *a
 	if a.ID != 0 {
-		artist, err := s.artistQuery("SELECT * FROM artist WHERE id = ?", a.ID)
-		if err != nil {
+		if err := s.db.Get(&r, "SELECT * FROM artist WHERE id = ?", a.ID);
+		err != nil {
 			return Artist{}, err
-		} else if len(artist) == 1 {
-			return artist[0], nil
-		} else {
-			return Artist{}, nil
 		}
+		return r, nil
 	}
 
 	// Load via title
-	artist, err := s.artistQuery("SELECT * FROM artists WHERE title = ?;", a.Title)
-	if err != nil {
+	if err := s.db.Get(&r, "SELECT * FROM artists WHERE title = ?;", a.Title);
+	err != nil {
 		return Artist{}, err
-	} else if len(artist) == 1 {
-		return artist[0], nil
-	} else {
-		return Artist{}, nil
 	}
+	return r, nil
 }
 
 // SaveArtist attempts to save an Artist to the database
 func (s *SqlBackend) SaveArtist(a *Artist) error {
 	// Insert new artist
-	query := "INSERT INTO artists (`title`) VALUES (?);"
+	query := "INSERT INTO artists (art_id, folder_id, title) VALUES (?, ?, ?);"
 	tx := s.db.MustBegin()
-	tx.Exec(query, a.Title)
+	tx.Exec(query, a.ArtID, a.FolderID, a.Title)
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
@@ -114,12 +109,21 @@ func (s *SqlBackend) SaveArtist(a *Artist) error {
 
 	// If no ID, reload to grab it
 	if a.ID == 0 {
-		if _, err := s.LoadArtist(a); err != nil {
+		artist, err := s.LoadArtist(a)
+		if err != nil {
 			return err
 		}
+		*a = artist
 	}
-
 	return nil
+}
+
+// UpdateArtistArt updates the Artists artId
+func (s *SqlBackend) UpdateArtistArt(a *Artist) error {
+	query := "UPDATE artists SET art_id = ? WHERE id = ?;"
+	tx := s.db.MustBegin()
+	tx.Exec(query, a.ArtID, a.ID)
+	return tx.Commit()
 }
 
 // PurgeOrphanArtists deletes all artists who are "orphaned", meaning that they no

@@ -20,7 +20,7 @@ func (f *Folder) Delete()	error {
 }
 
 // Load pulls an existing folder from the db
-func (f *Folder) Load() error {
+func (f *Folder) Load() (Folder, error) {
 	return DB.LoadFolder(f)
 }
 

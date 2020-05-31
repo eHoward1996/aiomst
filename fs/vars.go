@@ -19,9 +19,11 @@ var audioType = map[string]bool {
 	".wv"  : true,
 }
 
-type folderArtPair struct {
-	folderID int
-	artID 	 int
+// AttachesArt is either a db.Album or db.Artist. Both implement a method
+// to update a row in the database with an ArtID. 
+type AttachesArt interface {
+	GetArtID()    int
+	SetArtID(int) error
 }
 
 // Task is an interface that defines a filesystem task

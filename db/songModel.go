@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/eHoward1996/audiotags"
-	"github.com/wtolson/go-taglib"
 )
 
 // Constants representing the various song file types which wavepipe can index
@@ -72,7 +71,6 @@ type Song struct {
 	ID           int    `json:"id"`
 	Album        string `json:"album"`
 	AlbumID      int    `db:"album_id" json:"albumId"`
-	ArtID        int    `db:"art_id" json:"artId"`
 	Artist       string `json:"artist"`
 	ArtistID     int    `db:"artist_id" json:"artistId"`
 	Bitrate      int    `json:"bitrate"`
@@ -124,13 +122,12 @@ func SongFromFile(file string) (*Song, error) {
 		return nil, errors.New("Song missing track number property")
 	}
 
-	s, _ := taglib.Read(file)
-	year := s.Year()
-	comments := props["comment"]
-	if comments == ""	{
-		comments = s.Comment()
+	sYear := props["date"]
+	year := 0
+	if sYear != "" {
+		year, _ = strconv.Atoi(sYear)
 	}
-	s.Close()
+	comments := props["comment"]
 
 	// Copy over fields from TagLib tags and properties, as well as OS information
 	return &Song{

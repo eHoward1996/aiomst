@@ -86,22 +86,23 @@ func (s *SqlBackend) DeleteFolder(f *Folder) error {
 }
 
 // LoadFolder loads a Folder from the database, populating the parameter struct
-func (s *SqlBackend) LoadFolder(f *Folder) error {
+func (s *SqlBackend) LoadFolder(f *Folder) (Folder, error) {
 	// Load the folder via ID if available
+	r := *f
 	if f.ID != 0 {
-		if err := s.db.Get(f, "SELECT * FROM folders WHERE id = ?;", f.ID); err != nil {
-			return err
+		if err := s.db.Get(&r, "SELECT * FROM folders WHERE id = ?;", f.ID);
+		err != nil {
+			return Folder{}, err
 		}
-
-		return nil
+		return r, nil
 	}
 
 	// Load via path
-	if err := s.db.Get(f, "SELECT * FROM folders WHERE path = ?;", f.Path); err != nil {
-		return err
+	if err := s.db.Get(&r, "SELECT * FROM folders WHERE path = ?;", f.Path);
+	err != nil {
+		return Folder{}, err
 	}
-
-	return nil
+	return r, nil
 }
 
 // SaveFolder attempts to save an Folder to the database
@@ -118,10 +119,11 @@ func (s *SqlBackend) SaveFolder(f *Folder) error {
 
 	// If no ID, reload to grab it
 	if f.ID == 0 {
-		if err := s.LoadFolder(f); err != nil {
+		folder, err := s.LoadFolder(f);
+		if err != nil {
 			return err
 		}
+		*f = folder
 	}
-
 	return nil
 }

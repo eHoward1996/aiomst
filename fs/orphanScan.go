@@ -1,13 +1,12 @@
 package fs
 
 import (
+	"aiomst/db"
 	"io/ioutil"
 	"log"
 	"os"
 	"sync"
 	"time"
-
-	"aiomst/db"
 )
 
 
@@ -76,11 +75,12 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 		// Remove all art which is not in this path
 		for _, a := range art {
 			// Remove art from database
+			filename := a.FileName
 			if err := a.Delete(); err != nil {
 				log.Println(err)
 				return 0, err
 			}
-
+			log.Printf("FS: Orphan Scan: Removed File: %v", filename)
 			artCount++
 		}
 
@@ -94,11 +94,12 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 		// Remove all songs which are not in this path
 		for _, s := range songs {
 			// Remove song from database
+			filename := s.FileName
 			if err := s.Delete(); err != nil {
 				log.Println(err)
 				return 0, err
 			}
-
+			log.Printf("FS: Orphan Scan: Removed File: %v", filename)
 			songCount++
 		}
 
@@ -112,11 +113,12 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 		// Remove all folders which are not in this path
 		for _, f := range folders {
 			// Remove folder from database
+			path := f.Path
 			if err := f.Delete(); err != nil {
 				log.Println(err)
 				return 0, err
 			}
-
+			log.Printf("FS: Orphan Scan: Removed Path: %v", path)
 			folderCount++
 		}
 	}
@@ -144,11 +146,12 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 		// Check that the art still exists in this place
 		if _, err := os.Stat(a.FileName); os.IsNotExist(err) {
 			// Remove art from database
+			filename := a.FileName
 			if err := a.Delete(); err != nil {
 				log.Println(err)
 				return 0, err
 			}
-
+			log.Printf("FS: Orphan Scan: File Does Not Exist: %v", filename)
 			artCount++
 		}
 	}
@@ -165,11 +168,12 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 		// Check that the song still exists in this place
 		if _, err := os.Stat(s.FileName); os.IsNotExist(err) {
 			// Remove song from database
+			filename := s.FileName
 			if err := s.Delete(); err != nil {
 				log.Println(err)
 				return 0, err
 			}
-
+			log.Printf("FS: Orphan Scan: File Does Not Exist: %v", filename)
 			songCount++
 		}
 	}
@@ -191,11 +195,12 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 
 		// Delete any folders with 0 items
 		if len(files) == 0 {
+			path := f.Path
 			if err := f.Delete(); err != nil {
 				log.Println(err)
 				return 0, err
 			}
-
+			log.Printf("FS: Orphan Scan: Folder Has No Items: %v", path)
 			folderCount++
 		}
 	}

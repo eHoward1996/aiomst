@@ -6,9 +6,9 @@ import (
 	"os"
 	"path"
 
-	// Include the sqlite3 driver
-
 	"github.com/jmoiron/sqlx"
+
+	// Include the sqlite3 driver
 	_ "github.com/mattn/go-sqlite3"
 )
 

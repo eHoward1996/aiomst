@@ -19,7 +19,7 @@ func (a *Art) Delete() error {
 }
 
 // Load pulls existing Art from the database
-func (a *Art) Load() error {
+func (a *Art) Load() (Art, error) {
 	return DB.LoadArt(a)
 }
 

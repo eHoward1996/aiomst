@@ -65,6 +65,77 @@ func (s *SqlBackend) CountAlbums() (int64, error) {
 	return s.integerQuery("SELECT COUNT(*) AS int FROM albums;")
 }
 
+// DeleteAlbum removes a Album from the database
+func (s *SqlBackend) DeleteAlbum(a *Album) error {
+	// Attempt to delete this album by its ID, if available
+	tx := s.db.MustBegin()
+	if a.ID != 0 {
+		tx.Exec("DELETE FROM albums WHERE id = ?;", a.ID)
+		return tx.Commit()
+	}
+
+	// Else, attempt to remove the album by its artist ID and title
+	tx.Exec("DELETE FROM albums WHERE artist_id = ? AND title = ?;", a.ArtistID, a.Title)
+	return tx.Commit()
+}
+
+// LoadAlbum loads an Album from the database, populating the parameter struct
+func (s *SqlBackend) LoadAlbum(a *Album) (Album, error) {
+	// Load the album via ID if available
+	r := *a
+	if a.ID != 0 {
+		if err := s.db.Get(
+			&r, "SELECT albums.*, artists.title AS artist FROM albums JOIN artists " +
+			"ON albums.artist_id = artists.id WHERE albums.id = ?;", a.ID);
+		err != nil {
+			return Album{}, err
+		}
+		return r, nil
+	}
+
+	// Load via artist ID and album title
+	if err := s.db.Get(&r, "SELECT albums.*, artists.title AS artist FROM albums " +
+		"JOIN artists ON albums.artist_id = artists.id WHERE albums.artist_id = ? " +
+		"AND albums.title = ?;", a.ArtistID, a.Title);
+	err != nil {
+		return Album{}, err
+	}
+	return r, nil
+}
+
+// SaveAlbum attempts to save an Album to the database
+func (s *SqlBackend) SaveAlbum(a *Album) error {
+	// Insert new album
+	query := "INSERT INTO albums " +
+		"(`art_id`, `artist_id`, `folder_id`, `title`, `year`) VALUES (?, ?, ?, ?, ?);"
+	tx := s.db.MustBegin()
+	tx.Exec(query, a.ArtID, a.ArtistID, a.FolderID, a.Title, a.Year);
+	
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	// If no ID, reload to grab it
+	if a.ID == 0 {
+		album, err := s.LoadAlbum(a)
+		if err != nil {
+			return err
+		}
+		*a = album
+	}
+
+	return nil
+}
+
+// UpdateAlbumArt updates the Albums artId
+func (s *SqlBackend) UpdateAlbumArt(a *Album) error {
+	query := "UPDATE albums SET art_id = ? WHERE id = ?;"
+	tx := s.db.MustBegin()
+	tx.Exec(query, a.ArtID, a.ID)
+	return tx.Commit()
+}
+
 // PurgeOrphanAlbums deletes all albums who are "orphaned", meaning that they no
 // longer have any songs which reference their ID
 func (s *SqlBackend) PurgeOrphanAlbums() (int, error) {
@@ -99,73 +170,4 @@ func (s *SqlBackend) PurgeOrphanAlbums() (int, error) {
 	}
 
 	return total, tx.Commit()
-}
-
-// DeleteAlbum removes a Album from the database
-func (s *SqlBackend) DeleteAlbum(a *Album) error {
-	// Attempt to delete this album by its ID, if available
-	tx := s.db.MustBegin()
-	if a.ID != 0 {
-		tx.Exec("DELETE FROM albums WHERE id = ?;", a.ID)
-		return tx.Commit()
-	}
-
-	// Else, attempt to remove the album by its artist ID and title
-	tx.Exec("DELETE FROM albums WHERE artist_id = ? AND title = ?;", a.ArtistID, a.Title)
-	return tx.Commit()
-}
-
-// LoadAlbum loads an Album from the database, populating the parameter struct
-func (s *SqlBackend) LoadAlbum(a *Album) (Album, error) {
-	// Load the album via ID if available
-	if a.ID != 0 {
-		albums, err := s.albumQuery(
-			"SELECT albums.*,artists.title AS artist FROM albums " +
-			"JOIN artists ON albums.artist_id = artists.id WHERE albums.id = ?;",
-			a.ID)
-
-		if err != nil {
-			return Album{}, err
-		} else if len(albums) == 1 {
-			return albums[0], nil
-		} else {
-			return Album{}, nil
-		}
-	}
-
-	// Load via artist ID and title
-	albums, err := s.albumQuery(
-		"SELECT albums.*,artists.title AS artist FROM albums " +
-		"JOIN artists ON albums.artist_id = artists.id WHERE albums.artist_id = ? " +
-		"AND albums.title = ?;", a.ArtistID, a.Title)
-	
-	if err != nil {
-		return Album{}, err
-	} else if len(albums) == 1 {
-		return albums[0], nil
-	} else {
-		return Album{}, nil
-	}
-}
-
-// SaveAlbum attempts to save an Album to the database
-func (s *SqlBackend) SaveAlbum(a *Album) error {
-	// Insert new album
-	query := "INSERT INTO albums (`artist_id`, `title`, `year`) VALUES (?, ?, ?);"
-	tx := s.db.MustBegin()
-	tx.Exec(query, a.ArtistID, a.Title, a.Year)
-
-	// Commit transaction
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	// If no ID, reload to grab it
-	if a.ID == 0 {
-		if _, err := s.LoadAlbum(a); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

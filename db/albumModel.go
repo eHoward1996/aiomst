@@ -2,21 +2,34 @@ package db
 
 // Album represents an album and contains information extracted from song tags
 type Album struct {
-	ID       int    `json:"id"`
-	Artist   string `json:"artist"`
-	ArtistID int    `db:"artist_id" json:"artistId"`
-	Title    string `json:"title"`
-	Year     int    `json:"year"`
+	ID       	int    	`json:"id"`
+	ArtID 		int 		`db:"art_id" json:"artId"`
+	Artist   	string 	`json:"artist"`
+	ArtistID 	int    	`db:"artist_id" json:"artistId"`
+	FolderID  int     `db:"folder_id" json:"folderId"`
+	Title    	string 	`db:"title" json:"title"`
+	Year     	int    	`db:"year" json:"year"`
 }
 
-// AlbumFromSong creates a new Album from a Song model, extracting its
+// GetAlbumFromSong creates a new Album from a Song model, extracting its
 // fields as needed to build the struct
-func AlbumFromSong(song *Song) *Album {
+func GetAlbumFromSong(song *Song) *Album {
 	return &Album{
 		Artist: song.Artist,
 		Title:  song.Album,
 		Year:   song.Year,
 	}
+}
+
+// GetArtID returns the ArtID from the struct
+func (a *Album) GetArtID() int	{
+	return a.ArtID
+}
+
+// SetArtID set the ArtID for the struct
+func (a *Album) SetArtID(aID int) error {
+	a.ArtID = aID
+	return DB.UpdateAlbumArt(a)
 }
 
 // Delete removes an existing Album from the database
