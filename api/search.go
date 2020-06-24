@@ -47,7 +47,6 @@ func GetSearch(c *gin.Context)	{
 			resp.Artists = artists
 		case "albums":
 			albums, err := db.DB.SearchAlbums(query)
-			log.Printf("%+v", albums)
 			if err != nil {
 				log.Print(err)
 				c.IndentedJSON(500, serverErr)

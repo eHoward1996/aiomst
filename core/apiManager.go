@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"runtime"
 	"strconv"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 )
@@ -24,6 +26,14 @@ func apiManager(apikillChan chan struct{})	{
 	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET"},
+		AllowHeaders:     []string{"Origin"},
+		ExposeHeaders:    []string{"Content-Type", "Content-Length", "origin"},
+		// AllowCredentials: true,
+		MaxAge: 12 * time.Hour,
+	}))
 	
 	r.Use(func(c *gin.Context)  {
 		srv := fmt.Sprintf("AIOMST ==> (%s_%s)", runtime.GOOS, runtime.GOARCH)
