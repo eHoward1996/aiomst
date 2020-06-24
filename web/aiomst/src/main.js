@@ -16,7 +16,8 @@ new Vue({
   watch: {
     '$route'(to)  {
       axios
-        .get("http://127.0.0.1:8090/search",  {
+        .get(to.path, {
+          baseURL: "http://127.0.0.1:8090",
           params: to.query,
         })
         .then((x) => {

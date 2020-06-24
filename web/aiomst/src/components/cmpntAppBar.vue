@@ -8,7 +8,6 @@
       <v-col cols="3"></v-col>
       <v-col cols="5">
         <v-text-field
-          append-icon=""
           color="#43A047"
           label="Search"
           prepend-inner-icon="mdi-magnify"
@@ -28,8 +27,6 @@
 </template>
 
 <script>
-// import axios from 'axios';
-
 export default {
   name: 'AppBar',
 

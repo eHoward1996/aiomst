@@ -1,10 +1,8 @@
 <template>
-  <!-- <v-app> -->
-    <div>
+  <div>
     <AppBar></AppBar>
     <Content page="artists"></Content>
-    </div>
-  <!-- </v-app> -->
+  </div>
 </template>
 
 <script>

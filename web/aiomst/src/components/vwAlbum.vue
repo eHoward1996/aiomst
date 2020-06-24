@@ -1,7 +1,7 @@
 <template>
   <div> 
     <AppBar></AppBar>
-    <Content page="albums"></Content>
+    <Content page="album"></Content>
   </div>
 </template>
 
@@ -10,7 +10,7 @@ import AppBar from '@/components/cmpntAppBar.vue';
 import Content from '@/components/cmpntContent.vue'
 
 export default {
-  name: 'Albums',
+  name: 'Album',
   components: {AppBar, Content},
 }
 </script>
