@@ -9,12 +9,12 @@ import Search  from './components/vwSearch';
 
 Vue.use(VueRouter);
 export default new VueRouter({
- mode: 'history',
- routes: [
-   {path: '/',        component: Index},
-   {path: '/album',   component: Album},
-   {path: '/artist',  component: Artist},
-   {path: '/song',    component: Song},
-   {path: '/search',  component: Search}
- ]
+  mode: 'history',
+  routes: [
+    {path: '/',        component: Index},
+    {path: '/album',   component: Album},
+    {path: '/artist',  component: Artist},
+    {path: '/song',    component: Song},
+    {path: '/search',  component: Search}
+  ]
 });

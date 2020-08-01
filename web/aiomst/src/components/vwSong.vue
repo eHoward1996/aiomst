@@ -1,16 +1,26 @@
 <template>
-  <div>
-    <AppBar></AppBar>
-    <Content page="song"></Content>
-  </div>
+  <cmpntLoadBar v-if="!finishedLoading"></cmpntLoadBar>
+  <v-container v-else>
+    <rndSongsList></rndSongsList>
+  </v-container>
 </template>
 
 <script>
-import AppBar from '@/components/cmpntAppBar.vue';
-import Content from '@/components/cmpntContent.vue'
+import rndSongsList from '@/components/rndSongsList.vue';
+import cmpntLoadBar from '@/components/cmpntLoadBar.vue';
 
 export default {
   name: 'Song',
-  components: {AppBar, Content},
+  components: {rndSongsList, cmpntLoadBar},
+  created: function() {
+    this.$store.dispatch('makeApiRequest', {path: '/songs'}).then(() => {
+      this.finishedLoading = true;
+    });
+  },
+  data: function() {
+    return {
+      finishedLoading: false,
+    }
+  },
 }
 </script>

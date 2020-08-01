@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <AppBar></AppBar>
+    <cmpntAppBar></cmpntAppBar>
     <v-content>
       <v-container fluid>
         <router-view></router-view>
@@ -10,13 +10,10 @@
 </template>
 
 <script>
-import AppBar from '@/components/cmpntAppBar.vue';
+import cmpntAppBar from '@/components/cmpntAppBar.vue';
 
 export default {
   name: 'App',
-  components: {AppBar},
-  data() {
-    return {}
-  }
+  components: {cmpntAppBar},
 }
 </script>
