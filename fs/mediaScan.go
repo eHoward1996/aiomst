@@ -3,16 +3,17 @@ package fs
 import (
 	"aiomst/db"
 	"database/sql"
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/karrick/godirwalk"
 )
 
 // Cache repetitive entries
@@ -87,36 +88,31 @@ func (fs *MediaScan) Scan(baseFolder, subFolder string, walkCancelChan chan stru
 		log.Printf("FS: Scanning: %s", baseFolder)
 	}
 
-	if err := filepath.Walk(
-		baseFolder,
-		func(cPath string, info os.FileInfo, e error) error	{
-			mutex.RLock()
-			if haltWalk {
-				return errors.New("FS: Media Scan: Halted by channel")
-			}
-			mutex.RUnlock()
+	err := godirwalk.Walk(baseFolder, &godirwalk.Options{
+		Callback: func(osPathname string, de *godirwalk.Dirent) error {
+			// mutex.RLock()
+			// if haltWalk {
+			// 	return errors.New("FS: Media Scan: Halted by channel")
+			// }
+			// mutex.RUnlock()
 
-			// This should never happen but just to be sure
-			if info == nil 	{
-				return errors.New("FS: Media Scan: invalid path: " + cPath)
-			}
-			
-			log.Printf("FS: Media Scan: Got new file: %s", cPath)
-			folder, inc, err := handleFolder(cPath, info)
+			info := de.ModeType()
+			log.Printf("FS: Media Scan: Got new file: %s", osPathname)
+			folder, inc, err := handleFolder(osPathname, info)
 			if err != nil {
 				return err
 			}
-			if folder != nil && inc {
+			if inc {
 				folderCount++
 			}
 
-			ext := path.Ext(cPath)
+			ext := path.Ext(osPathname)
 			if img, audio := imgType[ext], audioType[ext]; !img && !audio {
 				return nil
 			}
 			
 			if _, ok := imgType[ext]; ok {
-				art, inc := handleImg(cPath, info)
+				art, inc := handleImg(osPathname, info)
 				if art != nil {
 					artFiles[folder.ID] = art.ID
 					if inc {
@@ -127,19 +123,30 @@ func (fs *MediaScan) Scan(baseFolder, subFolder string, walkCancelChan chan stru
 			}
 
 			if _, ok := audioType[ext]; ok {
-				changes, err := handleAudio(cPath, info, folder)
+				changes, err := handleAudio(osPathname, info, folder)
 				if err != nil {
-					return err
+					return nil
 				}
-				if err == nil {
-					artistCount += changes[0]
-					albumCount  += changes[1]
-					songCount   += changes[2]
-					songUpdate  += changes[3]
-				}
+				
+				artistCount += changes[0]
+				albumCount  += changes[1]
+				songCount   += changes[2]
+				songUpdate  += changes[3]
 			}
 			return nil
-		});	err != nil {
+		},
+		ErrorCallback: func(osPathname string, err error) godirwalk.ErrorAction {
+			if strings.Contains(err.Error(), "input/output error") {
+				log.Print("FS: Media Scan: Error: I/O Error... Is the drive mounted?")
+			} else {
+				log.Printf("FS: Media Scan: ERROR: %s\n", err)
+			}
+			
+			return godirwalk.SkipNode
+		},
+		Unsorted: true,
+	})
+	if err != nil {
 		return 0, err
 	}
 
@@ -164,7 +171,7 @@ func (fs *MediaScan) Scan(baseFolder, subFolder string, walkCancelChan chan stru
 	return sum, nil
 }
 
-func handleFolder(cPath string, info os.FileInfo)	(*db.Folder, bool, error) {
+func handleFolder(cPath string, info os.FileMode)	(*db.Folder, bool, error) {
 	// Check for cached folder
 	if seenFolder, ok := folderCache[cPath]; ok	{
 		return seenFolder, false, nil
@@ -184,16 +191,16 @@ func handleFolder(cPath string, info os.FileInfo)	(*db.Folder, bool, error) {
 	}
 
 	if err == sql.ErrNoRows  {
-		files, err := ioutil.ReadDir(folder.Path)
+		log.Printf("%s", folder.Path)
+		files, err := godirwalk.ReadDirents(folder.Path, nil)
 		if err != nil {
+			log.Print("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
 			return nil, false, err
-		}
-		
-		log.Printf("FS: Media Scan: Found %v files in %v", len(files), cPath)
-		if len(files) == 0 {
+		} else if len(files) == 0 {
 			return nil, false, nil
 		}
 
+		log.Printf("FS: Media Scan: Found %v files in %v", len(files), cPath)
 		folder.Title = path.Base(folder.Path)
 		parent := new(db.Folder)
 		if info.IsDir() {
@@ -218,7 +225,7 @@ func handleFolder(cPath string, info os.FileInfo)	(*db.Folder, bool, error) {
 	return folder, true, nil
 }
 
-func handleImg(cPath string, info os.FileInfo) (*db.Art, bool) {
+func handleImg(cPath string, info os.FileMode) (*db.Art, bool) {
 	art := new(db.Art)
 	art.FileName = cPath
 
@@ -228,8 +235,14 @@ func handleImg(cPath string, info os.FileInfo) (*db.Art, bool) {
 	}
 
 	if err == sql.ErrNoRows {
-		art.FileSize = info.Size()
-		art.LastModified = info.ModTime().Unix()
+		data, err := os.Stat(cPath)
+		if err != nil {
+			log.Printf("FS: Media Scan: Handle Art: %v", err)
+			return nil, false
+		}
+
+		art.FileSize = data.Size()
+		art.LastModified = data.ModTime().Unix()
 
 		if art.FileSize == 0 {
 			log.Printf("FS: Media Scan: Handle Art: Art File Size is 0")
@@ -245,21 +258,27 @@ func handleImg(cPath string, info os.FileInfo) (*db.Art, bool) {
 	return nil, false
 }
 
-func handleAudio(cPath string, info os.FileInfo, folder *db.Folder) ([]int, error)	{
+func handleAudio(cPath string, info os.FileMode, folder *db.Folder) ([]int, error)	{
 	song, err := db.SongFromFile(cPath)
 	if err != nil {
 		return []int{}, fmt.Errorf(
 			"FS: Media Scan: Handle Audio Error: %v", err)
 	}
 
-	if info.Size() == 0 {
+	data, err := os.Stat(cPath)
+	if err != nil {
+		log.Printf("FS: Media Scan: Handle Art: %v", err)
+		return nil, err
+	}
+
+	if data.Size() == 0 {
 		return []int{}, fmt.Errorf(
 			"FS: Media Scan: Handle Audio Error: Audio File Size is 0")
 	}
 
 	song.FileName = cPath
-	song.FileSize = info.Size()
-	song.LastModified = info.ModTime().Unix()
+	song.FileSize = data.Size()
+	song.LastModified = data.ModTime().Unix()
 	song.FolderID = folder.ID
 	song.FileTypeID = db.FileTypeMap[path.Ext(cPath)]
 

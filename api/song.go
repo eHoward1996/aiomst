@@ -27,7 +27,7 @@ func GetSongs(c *gin.Context) {
 }
 
 func handleSongNoID(c *gin.Context)	{
-	songs, err := db.DB.AllSongs()
+	songs, err := db.DB.AllSongsByTitle()
 	if err != nil {
 		log.Print(err)
 		c.JSON(500, serverErr)
@@ -36,7 +36,7 @@ func handleSongNoID(c *gin.Context)	{
 
 	resp := new(SongsResponse)
 	resp.Songs = songs
-	c.IndentedJSON(200, songs)
+	c.IndentedJSON(200, resp)
 	return
 }
 

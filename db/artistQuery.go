@@ -39,9 +39,10 @@ func (s *SqlBackend) AllArtists() ([]Artist, error) {
 	return s.artistQuery("SELECT * FROM artists;")
 }
 
-// AllArtistsByTitle loads a slice of all Artist structs from the database, sorted alphabetically by title
+// AllArtistsByTitle loads a slice of all Artist structs from the database,
+// sorted alphabetically by title case insensitive
 func (s *SqlBackend) AllArtistsByTitle() ([]Artist, error) {
-	return s.artistQuery("SELECT * FROM artists ORDER BY title;")
+	return s.artistQuery("SELECT * FROM artists ORDER BY title COLLATE NOCASE ASC;")
 }
 
 // LimitArtists loads a slice of Artist structs from the database using SQL limit, where the first parameter
@@ -80,7 +81,7 @@ func (s *SqlBackend) LoadArtist(a *Artist) (Artist, error) {
 	// Load the artist via ID if available
 	r := *a
 	if a.ID != 0 {
-		if err := s.db.Get(&r, "SELECT * FROM artist WHERE id = ?", a.ID);
+		if err := s.db.Get(&r, "SELECT * FROM artists WHERE id = ?", a.ID);
 		err != nil {
 			return Artist{}, err
 		}

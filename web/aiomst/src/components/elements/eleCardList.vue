@@ -37,7 +37,7 @@
 
 <script>
 export default {
-  name: 'cmpntCardList',
+  name: 'eleCardList',
   props: ['req'],
   computed: {
     objs() {

@@ -8,22 +8,22 @@
         </v-col>
       </v-row>
       <v-row>
-        <cmpntCardList req="albums"></cmpntCardList>
+        <eleCardList req="albums"></eleCardList>
       </v-row>
     </v-container>
     <v-container v-else fluid style="width: 75%;">
-      <cmpntCardList req="artists" v-if="artists"></cmpntCardList>
+      <eleCardList req="artists" v-if="artists"></eleCardList>
     </v-container>
   </div>
 </template>
 
 <script>
-import cmpntCardList from '@/components/cmpntCardList.vue';
-import cmpntLoadBar from '@/components/cmpntLoadBar.vue';
+import eleCardList from '@/components/elements/eleCardList.vue';
+import cmpntLoadBar from '@/components/layout/cmpntLoadBar.vue';
 
 export default {
   name: 'Artist',
-  components: {cmpntCardList, cmpntLoadBar},
+  components: {eleCardList, cmpntLoadBar},
   created: function() {
     let navInfo = {
       path: '/artists',
@@ -39,11 +39,11 @@ export default {
       }
       this.finishedLoading = true;
     });
-    this.active_tab = 1;
+    // this.active_tab = 1;
   },
   data: function() {
     return {
-      active_tab: 1,
+      // active_tab: 1,
       artists: null,
       albums: null,
       finishedLoading: false,

@@ -40,6 +40,14 @@ func (s *SqlBackend) AllSongs() ([]Song, error) {
 		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id;")
 }
 
+// AllSongsByTitle loads a slice of all Song structs from the database by Song
+// title case insensitive
+func (s *SqlBackend) AllSongsByTitle() ([]Song, error) {
+	return s.songQuery("SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs " +
+		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id " +
+		"ORDER BY title COLLATE NOCASE ASC;")
+}
+
 // LimitSongs loads a slice of Song structs from the database using SQL limit, where the first parameter
 // specifies an offset and the second specifies an item count
 func (s *SqlBackend) LimitSongs(offset int, count int) ([]Song, error) {
