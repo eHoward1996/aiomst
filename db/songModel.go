@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/eHoward1996/audiotags"
 )
@@ -23,6 +22,8 @@ const (
 )
 
 var (
+	// ErrSongTags is returned when required tags could not be extracted from a TagLib file
+	ErrSongTags = errors.New("song: required tags could not be extracted from audio file")
 	// ErrSongProperties is returned when required properties could not be extracted from a TagLib file
 	ErrSongProperties = errors.New("song: required properties could not be extracted from audio file")
 )
@@ -91,7 +92,6 @@ type Song struct {
 // SongFromFile creates a new Song from a file, extracting its tags and properties
 // into the fields of the struct.
 func SongFromFile(file string) (*Song, error) {
-	var err error
 	props, audioProps, err := audiotags.Read(file)
 	if err != nil {
 		return nil, err
@@ -101,13 +101,8 @@ func SongFromFile(file string) (*Song, error) {
 	// At minimum, we will need an artist and title to do anything useful with this file
 	title :=  props["title"]
 	artist := props["albumartist"]
-	if title == "" {
-		title = "UNKNOWN SONG TITLE"
-		err = errors.New("Song missing title")
-	}
-	if artist == "" {
-		artist = "UNKNOWN ALBUM ARTIST"
-		err = errors.New("Song missing artist")
+	if title == "" || artist == "" {
+		return nil, ErrSongTags
 	}
 
 	// Retrieve all properties, check for empty
@@ -122,10 +117,9 @@ func SongFromFile(file string) (*Song, error) {
 		return nil, ErrSongProperties
 	}
 
-	trackNumStr := strings.Split(props["tracknumber"], "/")[0]
-	trackNum, err := strconv.Atoi(trackNumStr)
+	trackNum, err := strconv.Atoi(string(props["tracknumber"][0]))
 	if err != nil {
-		err = errors.New("Song missing track number property")
+		return nil, errors.New("Song missing track number property")
 	}
 
 	sYear := props["date"]
@@ -148,7 +142,7 @@ func SongFromFile(file string) (*Song, error) {
 		Title:      title,
 		Track:      trackNum,
 		Year:       year,
-	}, err
+	}, nil
 }
 
 // Delete removes an existing Song from the database

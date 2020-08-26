@@ -21,24 +21,24 @@
             </v-img>
           </v-row>
         </v-col>
-        <v-col cols="4"><eleSongList></eleSongList></v-col>
+        <v-col cols="4"><rndSongsList></rndSongsList></v-col>
         <v-col cols="2"></v-col>
       </v-row>
       <v-row v-else>
-        <eleCardList v-if="albums" req="albums"></eleCardList>
+        <cmpntCardList v-if="albums" req="albums"></cmpntCardList>
       </v-row>
     </v-container>
   </div>
 </template>
 
 <script>
-import eleCardList from '@/components/elements/eleCardList.vue';
-import eleSongList from '@/components/elements/eleSongList.vue';
-import cmpntLoadBar from '@/components/layout/cmpntLoadBar.vue';
+import cmpntCardList from '@/components/cmpntCardList.vue';
+import rndSongsList from '@/components/rndSongsList.vue';
+import cmpntLoadBar from '@/components/cmpntLoadBar.vue';
 
 export default {
   name: 'Album',
-  components: {eleCardList, cmpntLoadBar, eleSongList},
+  components: {cmpntCardList, cmpntLoadBar, rndSongsList},
   created: function() {
     let navInfo = {
       path: '/albums',
@@ -56,6 +56,7 @@ export default {
   },
   data: function() {
     return {
+      active_tab: 2,
       albums: [],
       finishedLoading: false,
       isSingleAlbumView: false,

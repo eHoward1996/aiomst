@@ -2,26 +2,26 @@
   <v-container fluid>
     <v-container v-if="checkArtistsInState" fluid style="width: 75%;">
       <v-row><h1>Artists <v-icon color="primary" x-large>mdi-account</v-icon></h1></v-row>
-      <eleCardList req="artists"></eleCardList>
+      <cmpntCardList req="artists"></cmpntCardList>
     </v-container>
     <v-container v-if="checkAlbumsInState" fluid style="width: 75%;">
       <v-row><h1>Albums <v-icon color="primary" x-large>mdi-disc</v-icon></h1></v-row>
-      <eleCardList req="albums"></eleCardList>
+      <cmpntCardList req="albums"></cmpntCardList>
     </v-container>
     <v-container v-if="checkSongsInState" fluid style="width: 75%;">
       <v-row><h1>Songs <v-icon color="primary" x-large>mdi-music-note</v-icon></h1></v-row>
-      <eleSongList></eleSongList>
+      <rndSongsList></rndSongsList>
     </v-container>
   </v-container>
 </template>
 
 <script>
-import eleCardList from '@/components/elements/eleCardList.vue';
-import eleSongList from '@/components/elements/eleSongList.vue';
+import cmpntCardList from '@/components/cmpntCardList.vue';
+import rndSongsList from '@/components/rndSongsList.vue';
 
 export default {
   name: 'Search',
-  components: {eleCardList, eleSongList},
+  components: {cmpntCardList, rndSongsList},
   computed: {
     checkArtistsInState: function() {
       return this.artists;

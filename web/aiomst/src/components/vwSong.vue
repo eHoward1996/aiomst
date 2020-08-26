@@ -1,17 +1,17 @@
 <template>
   <cmpntLoadBar v-if="!finishedLoading"></cmpntLoadBar>
   <v-container v-else>
-    <eleSongList></eleSongList>
+    <rndSongsList></rndSongsList>
   </v-container>
 </template>
 
 <script>
-import eleSongList from '@/components/elements/eleSongList.vue';
-import cmpntLoadBar from '@/components/layout/cmpntLoadBar.vue';
+import rndSongsList from '@/components/rndSongsList.vue';
+import cmpntLoadBar from '@/components/cmpntLoadBar.vue';
 
 export default {
   name: 'Song',
-  components: {eleSongList, cmpntLoadBar},
+  components: {rndSongsList, cmpntLoadBar},
   created: function() {
     this.$store.dispatch('makeApiRequest', {path: '/songs'}).then(() => {
       this.finishedLoading = true;

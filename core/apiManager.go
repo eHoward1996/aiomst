@@ -2,14 +2,17 @@ package core
 
 import (
 	"aiomst/api"
+	"aiomst/db"
 	"aiomst/util"
 	"fmt"
 	"log"
 	"net/http"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,20 +25,13 @@ func apiManager(apikillChan chan struct{})	{
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
+	r.Use(gzip.Gzip(gzip.DefaultCompression))
 	r.Use(cors.New(cors.Config{
-		AllowAllOrigins:     	true,
-		AllowHeaders:     	 	[]string{
-			"Content-Type",
-			"Origin",
-			"Accept-Ranges",
-			"Ranges",
-			"Access-Control-Allow-Origin",
-		},
-		ExposeHeaders:    []string{
-			"Content-Type", 
-			"Content-Length", 
-			"Origin",
-		},
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET"},
+		AllowHeaders:     []string{"Origin"},
+		ExposeHeaders:    []string{"Content-Type", "Content-Length", "origin"},
+		// AllowCredentials: true,
 		MaxAge: 12 * time.Hour,
 	}))
 	
@@ -46,13 +42,24 @@ func apiManager(apikillChan chan struct{})	{
 		return
 	})
 	
-	// r.GET("/", func(c *gin.Context) {c.String(http.StatusOK, "pong")})
+	r.GET("/", func(c *gin.Context) {c.String(http.StatusOK, "pong")})
 	r.GET("/albums", api.GetAlbums)
 	r.GET("/artists", api.GetArtist)
 	r.GET("/songs", api.GetSongs)
-	r.GET("/art", api.GetArt)
 	r.GET("/search", api.GetSearch)
-	r.GET("/stream", api.GetStream)
+
+	imgFiles, err := db.DB.AllArt()
+	if err != nil || len(imgFiles) == 0 {
+		log.Printf("API: Couldn't get Art files: %s", err)
+	}
+
+	imgRoute := r.Group("/art")
+	{
+		for _, art := range imgFiles {
+			id := strconv.Itoa(art.ID)
+			imgRoute.StaticFile(id, art.FileName)
+		}
+	}
 
 	sConf := util.LoadConfig()
 	server := &http.Server{

@@ -1,11 +1,11 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 
-import Index   from './components/views/vwIndex.vue';
-import Album   from './components/views/vwAlbum.vue';
-import Artist  from './components/views/vwArtist.vue';
-import Song    from './components/views/vwSong.vue';
-import Search  from './components/views/vwSearch.vue';
+import Index   from './components/vwIndex';
+import Album   from './components/vwAlbum';
+import Artist  from './components/vwArtist';
+import Song    from './components/vwSong';
+import Search  from './components/vwSearch';
 
 Vue.use(VueRouter);
 export default new VueRouter({

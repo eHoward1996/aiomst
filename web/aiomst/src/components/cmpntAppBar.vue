@@ -10,7 +10,7 @@
       <v-col cols="3"></v-col>
       <v-col cols="5">
         <v-text-field
-          color="green darken-2"
+          color="#43A047"
           label="Search"
           prepend-inner-icon="mdi-magnify"
           hide-details="auto"
@@ -27,13 +27,11 @@
       <v-col cols="2"></v-col>
     </v-row>
     <template v-slot:extension>
-      <keep-alive>
-        <v-tabs align-with-title>
-          <v-tab v-for="tab in tabs" :key="tab.id" @click="route(tab.name)">
-            {{tab.text}}
-          </v-tab>
-        </v-tabs>
-      </keep-alive>
+      <v-tabs align-with-title v-model="active_tab">
+        <v-tab v-for="tab in tabs" :key="tab.id" @click="route(tab.name)">
+          {{tab.text}}
+        </v-tab>
+      </v-tabs>
     </template>
   </v-app-bar>
 </template>

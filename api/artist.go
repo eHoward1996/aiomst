@@ -32,7 +32,7 @@ func handleArtistID(sID string, c *gin.Context)	{
 	id, err := strconv.Atoi(sID)
 	if err != nil {
 		log.Print(err)
-		c.JSON(200, "Invalid integer artist ID")
+		c.JSON(400, "Invalid integer artist ID")
 		return
 	}
 
@@ -90,7 +90,7 @@ func handleArtistNoID(c *gin.Context)	{
 		return
 	}
 
-	artists, err := db.DB.AllArtistsByTitle()
+	artists, err := db.DB.AllArtists()
 	if err != nil {
 		log.Print(err)
 		c.JSON(500, ErrGeneric)

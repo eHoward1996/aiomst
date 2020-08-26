@@ -60,7 +60,7 @@ func handleAlbumID(sID string, c *gin.Context)	{
 }
 
 func handleAlbumNoID(c *gin.Context)	{
-	albums, err := db.DB.AllAlbumsByTitle()
+	albums, err := db.DB.AllAlbums()
 	if err != nil {
 		log.Print(err)
 		c.JSON(500, ErrGeneric)
