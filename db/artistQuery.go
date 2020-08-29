@@ -80,7 +80,7 @@ func (s *SqlBackend) LoadArtist(a *Artist) (Artist, error) {
 	// Load the artist via ID if available
 	r := *a
 	if a.ID != 0 {
-		if err := s.db.Get(&r, "SELECT * FROM artist WHERE id = ?", a.ID);
+		if err := s.db.Get(&r, "SELECT * FROM artists WHERE id = ?", a.ID);
 		err != nil {
 			return Artist{}, err
 		}
