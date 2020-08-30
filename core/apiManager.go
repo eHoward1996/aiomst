@@ -47,10 +47,12 @@ func apiManager(apikillChan chan struct{})	{
 	})
 	
 	r.GET("/", func(c *gin.Context) {c.String(http.StatusOK, "pong")})
-	r.GET("/albums", api.GetAlbums)
+	r.GET("/albums",  api.GetAlbums)
 	r.GET("/artists", api.GetArtist)
-	r.GET("/songs", api.GetSongs)
-	r.GET("/search", api.GetSearch)
+	r.GET("/songs",   api.GetSongs)
+	r.GET("/search",  api.GetSearch)
+	r.GET("/art",     api.GetArt)
+	r.GET("/stream",  api.GetStream)
 
 	sConf := util.LoadConfig()
 	server := &http.Server{
