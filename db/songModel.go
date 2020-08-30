@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/eHoward1996/audiotags"
 )
@@ -22,8 +23,6 @@ const (
 )
 
 var (
-	// ErrSongTags is returned when required tags could not be extracted from a TagLib file
-	ErrSongTags = errors.New("song: required tags could not be extracted from audio file")
 	// ErrSongProperties is returned when required properties could not be extracted from a TagLib file
 	ErrSongProperties = errors.New("song: required properties could not be extracted from audio file")
 )
@@ -97,12 +96,26 @@ func SongFromFile(file string) (*Song, error) {
 		return nil, err
 	}
 	
+	// Track all errors
+	// TODO: Find a better way to track errors
+	errs := ""
+
 	// Retrieve some tags needed by aiomst, check for empty
 	// At minimum, we will need an artist and title to do anything useful with this file
-	title :=  props["title"]
+	title  := props["title"]
 	artist := props["albumartist"]
-	if title == "" || artist == "" {
-		return nil, ErrSongTags
+	album  := props["album"]
+	if title == "" {
+		title = "UNKNOWN SONG TITLE"
+		errs += "No song title provided\n"
+	}
+	if artist == "" {
+		artist = "UNKNOWN ALBUM ARTIST"
+		errs += "No album artist provided\n"
+	}
+	if album == "" {
+		album = "UNKNOWN ALBUM TITLE"
+		errs += "No album title provided\n"
 	}
 
 	// Retrieve all properties, check for empty
@@ -117,9 +130,11 @@ func SongFromFile(file string) (*Song, error) {
 		return nil, ErrSongProperties
 	}
 
-	trackNum, err := strconv.Atoi(string(props["tracknumber"][0]))
+	trackNumStr := strings.Split(props["tracknumber"], "/")[0]
+	trackNum, err :=strconv.Atoi(trackNumStr)
 	if err != nil {
-		return nil, errors.New("Song missing track number property")
+		trackNum = 0
+		errs += "Song missing track number property\n"
 	}
 
 	sYear := props["date"]
@@ -131,7 +146,7 @@ func SongFromFile(file string) (*Song, error) {
 
 	// Copy over fields from TagLib tags and properties, as well as OS information
 	return &Song{
-		Album:      props["album"],
+		Album:      album,
 		Artist:     artist,
 		Bitrate:    bitrate,
 		Channels:   channels,
@@ -142,7 +157,7 @@ func SongFromFile(file string) (*Song, error) {
 		Title:      title,
 		Track:      trackNum,
 		Year:       year,
-	}, nil
+	}, errors.New(errs)
 }
 
 // Delete removes an existing Song from the database
