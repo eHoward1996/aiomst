@@ -88,71 +88,14 @@ func (fs *MediaScan) Scan(baseFolder, subFolder string, walkCancelChan chan stru
 		log.Printf("FS: Scanning: %s", baseFolder)
 	}
 
-	if err := filepath.Walk(
-		baseFolder,
-		func(cPath string, info os.FileInfo, e error) error	{
-			mutex.RLock()
-			if haltWalk {
-				return errors.New("FS: Media Scan: Halted by channel")
-			}
-			mutex.RUnlock()
-
-			// This should never happen but just to be sure
-			if info == nil 	{
-				return errors.New("FS: Media Scan: invalid path: " + cPath)
-			}
-			
-			log.Printf("FS: Media Scan: Got new file: %s", cPath)
-			folder, inc, err := handleFolder(cPath, info)
-			if err != nil {
-				return err
-			}
-			if folder != nil && inc {
-				folderCount++
-			}
-
-			ext := path.Ext(cPath)
-			if img, audio := imgType[ext], audioType[ext]; !img && !audio {
-				return nil
-			}
-			
-			if _, ok := imgType[ext]; ok {
-				art, inc := handleImg(cPath, info)
-				if art != nil {
-					artFiles[folder.ID] = art.ID
-					if inc {
-						artCount++
-					}
-				}
-				return nil
-			}
-
-			if _, ok := audioType[ext]; ok {
-				changes, err := handleAudio(cPath, info, folder)
-				if err != nil {
-					return err
-				}
-				if err == nil {
-					artistCount += changes[0]
-					albumCount  += changes[1]
-					songCount   += changes[2]
-					songUpdate  += changes[3]
-				}
-			}
-			return nil
-		});	err != nil {
-		return 0, err
-	}
-
-	err := godirwalk.Walk(baseFolder, &godirwalk.Options{
+	godirwalk.Walk(baseFolder, &godirwalk.Options{
 		Callback: func(osPathname string, de *godirwalk.Dirent) error	{
 			info := de.ModeType()
 			log.Printf("FS: Media Scan: Got new file: %s", osPathname)
 			
 			folder, inc, err := handleFolder(osPathname, info)
 			if err != nil {
-				log.Printf("FS: Media Scan: Error handling folder: %s", err)
-				return nil
+				return fmt.Errorf("FS: Media Scan: Error handling folder: %s", err)
 			}
 			if inc {
 				folderCount++
@@ -166,8 +109,7 @@ func (fs *MediaScan) Scan(baseFolder, subFolder string, walkCancelChan chan stru
 			if _, ok := imgType[ext]; ok {
 				art, inc, err := handleImg(osPathname, info)
 				if err != nil {
-					log.Printf("FS: Media Scan: Error handling image: %s", err)
-					return nil
+					return fmt.Errorf("FS: Media Scan: Error handling image: %s", err)
 				}
 				if art != nil {
 					artFiles[folder.ID] = art.ID
@@ -181,8 +123,7 @@ func (fs *MediaScan) Scan(baseFolder, subFolder string, walkCancelChan chan stru
 			if _, ok := audioType[ext]; ok {
 				changes, err := handleAudio(osPathname, info, folder)
 				if err != nil {
-					log.Printf("FS: Media Scan: Error handling audio file: %s", err)
-					return nil
+					return fmt.Errorf("FS: Media Scan: Error handling audio file: %s", err)
 				}
 
 				artistCount += changes[0]
@@ -192,13 +133,18 @@ func (fs *MediaScan) Scan(baseFolder, subFolder string, walkCancelChan chan stru
 			}
 			return nil
 		},
+		ErrorCallback: func(osPathname string, err error) godirwalk.ErrorAction {
+			log.Printf("%s", err)
+			return godirwalk.SkipNode
+		},
+		Unsorted: true,
 	})
 
 	for fID, aID := range artFiles {
 		if v, member := attachArt[fID]; member {
 			if aID != 0 && aID != v.GetArtID() {		 
 				if err := v.SetArtID(aID); err != nil {
-					log.Printf("FS: Media Scan: Attach Art: ", err)
+					log.Printf("FS: Media Scan: Attach Art Error: ", err)
 				}
 			}
 		}
