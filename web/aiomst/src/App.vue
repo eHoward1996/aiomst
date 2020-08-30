@@ -10,7 +10,7 @@
 </template>
 
 <script>
-import cmpntAppBar from '@/components/cmpntAppBar.vue';
+import cmpntAppBar from '@/components/layout/cmpntAppBar.vue';
 
 export default {
   name: 'App',

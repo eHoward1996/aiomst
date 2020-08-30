@@ -21,7 +21,7 @@ import eleSongsList from '@/components/elements/eleSongsList.vue';
 
 export default {
   name: 'Search',
-  components: {cmpntCardList, rndSongsList},
+  components: {eleCardList, eleSongsList},
   computed: {
     checkArtistsInState: function() {
       return this.artists;
