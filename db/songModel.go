@@ -144,6 +144,11 @@ func SongFromFile(file string) (*Song, error) {
 	}
 	comments := props["comment"]
 
+	err = nil
+	if errs != "" {
+		err = errors.New(errs)
+	}
+
 	// Copy over fields from TagLib tags and properties, as well as OS information
 	return &Song{
 		Album:      album,
@@ -157,7 +162,7 @@ func SongFromFile(file string) (*Song, error) {
 		Title:      title,
 		Track:      trackNum,
 		Year:       year,
-	}, errors.New(errs)
+	}, err
 }
 
 // Delete removes an existing Song from the database
