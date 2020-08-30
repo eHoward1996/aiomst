@@ -40,7 +40,7 @@ func handleArtistID(sID string, c *gin.Context)	{
 	a, err := artist.Load()
 	if err != nil {
 		if err == sql.ErrNoRows 	{
-			c.IndentedJSON(404, "Artist ID not found.")
+			c.IndentedJSON(400, "Artist ID not found.")
 			return
 		}
 
@@ -90,7 +90,7 @@ func handleArtistNoID(c *gin.Context)	{
 		return
 	}
 
-	artists, err := db.DB.AllArtists()
+	artists, err := db.DB.AllArtistsByTitle()
 	if err != nil {
 		log.Print(err)
 		c.JSON(500, ErrGeneric)
