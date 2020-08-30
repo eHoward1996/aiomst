@@ -40,6 +40,14 @@ func (s *SqlBackend) AllAlbums() ([]Album, error) {
 		"JOIN artists ON albums.artist_id = artists.id;")
 }
 
+// AllAlbumsByTitle loads a slice of all Album structs from the database ordered
+// by their title case insensitive
+func (s *SqlBackend) AllAlbumsByTitle() ([]Album, error) {
+	return s.albumQuery("SELECT albums.*,artists.title AS artist FROM albums " +
+		"JOIN artists ON albums.artist_id = artists.id ORDER BY albums.title " + 
+		"COLLATE NOCASE ASC;")
+}
+
 // LimitAlbums loads a slice of Album structs from the database using SQL limit, where the first parameter
 // specifies an offset and the second specifies an item count
 func (s *SqlBackend) LimitAlbums(offset int, count int) ([]Album, error) {
