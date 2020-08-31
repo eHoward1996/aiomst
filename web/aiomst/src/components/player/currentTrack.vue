@@ -64,16 +64,19 @@
         </v-row>
 
         <v-row no-gutters style="height: 50%;" class="playback">
-          <v-col cols="2" class="outer">
+          <v-col cols="2" class="outer text-center">
             {{ sliderValue ? formatTime(sliderValue) : '' }}
           </v-col>
-          <v-col cols="8" class="inner">
+          
+          <v-col cols="8" class="inner" align-self="center">
             <v-slider 
                 :value="sliderValue" 
-                :max="songDuration || 1">
+                :max="songDuration || 1"
+                @change="manualSliderChange">
             </v-slider>
           </v-col>
-          <v-col cols="2" class="outer">
+          
+          <v-col cols="2" class="outer text-center">
             {{ songDuration ? formatTime(songDuration) : '' }}
           </v-col>
         </v-row>
@@ -139,32 +142,11 @@ export default {
 
       return minute + ":" + sec;
     },
-    // getSongLength: function() {
-    //   if (this.playback) {
-    //     var t = parseInt(this.playback.song.length);
-    //     var minute = Math.floor(t / 60);
-
-    //     const zeroPad = (num) => String(num).padStart(2, '0')
-    //     var sec = zeroPad(t % 60);
-
-    //     return minute  ":"  sec;
-    //   }
-    // },
-    // getProgress: function() {
-    //   if (this.playback) {
-    //     var t = parseInt(this.sliderValue);
-    //     var minute = Math.floor(t / 60);
-
-    //     const zeroPad = (num) => String(num).padStart(2, '0')
-    //     var sec = zeroPad(t % 60);
-
-    //     return minute  ":"  sec;
-    //   }
-    // },
     getArtSrc: function() {
       if (this.currentAlbum) {
-        var artId = this.currentAlbum.artId
-        if (this.currentAlbum.id === this.playback.song.albumId) {
+        var album = this.currentAlbum["albums"][0]
+        var artId = album.artId
+        if (album.id === this.playback.song.albumId) {
           this.prevArtId = artId
           return 'http://localhost:8090/art?id=' + artId
         }
@@ -199,6 +181,9 @@ export default {
           }
         }, 1000);
       }
+    },
+    manualSliderChange: function(sValue) {
+      console.log(sValue)
     }
   },
   watch: {
@@ -212,7 +197,7 @@ export default {
 }
 </script>
 
-<style scoped lang='sass'>
+<style scoped lang="sass">
   ::v-deep .v-slider
     height: 25px !important
     
@@ -265,10 +250,13 @@ export default {
         height: 100%
 
         .playback
-          .outer
+          .inner
             height: 100%
+            align-self: center !important
+
+          .outer
             width: 100%
-            padding: .5% 7% .5% 7%
+            align-self: center !important
 
 
       &_right
