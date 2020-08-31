@@ -21,9 +21,18 @@
             </v-img>
           </v-row>
         </v-col>
-        <v-col cols="4"><eleSongsList></eleSongsList></v-col>
+        <v-col cols="4">
+          <v-row>
+            <v-col cols="6" class="text-left">{{getTracksLength()}}</v-col>
+            <v-col cols="6" class="text-right">{{getPlayLength()}}</v-col>
+          </v-row>
+          <v-row>
+            <eleSongsList></eleSongsList>
+          </v-row>
+        </v-col>
         <v-col cols="2"></v-col>
       </v-row>
+   
       <v-row v-else>
         <eleCardList v-if="albums" req="albums"></eleCardList>
       </v-row>
@@ -32,6 +41,7 @@
 </template>
 
 <script>
+import {mapGetters, mapState} from 'vuex';
 import eleCardList  from '@/components/elements/eleCardList.vue';
 import eleSongsList from '@/components/elements/eleSongsList.vue';
 import cmpntLoadBar from '@/components/layout/cmpntLoadBar.vue';
@@ -39,27 +49,21 @@ import cmpntLoadBar from '@/components/layout/cmpntLoadBar.vue';
 export default {
   name: 'Album',
   components: {eleCardList, eleSongsList, cmpntLoadBar},
-  created: function() {
-    let navInfo = {
-      path: '/albums',
-      params: this.$route.query,
-    };
-
-    this.$store.dispatch('makeApiRequest', navInfo).then(() => {
-      this.albums = this.$store.getters.albums;
-      this.isSingleAlbumView = false;
-      if (this.albums.length === 1) {
-        this.isSingleAlbumView = true;
-      }
-      this.finishedLoading = true;
-    });
-  },
+  
   data: function() {
     return {
-      albums: [],
       finishedLoading: false,
       isSingleAlbumView: false,
     }
+  },
+  computed: {
+    ...mapGetters({
+      albums:       'getAlbums',
+      currentAlbum: 'currentAlbum',
+    }),
+    ...mapState({
+      apiResp: 'gResp', 
+    })
   },
   methods: {
     artSrc: function() {
@@ -73,23 +77,32 @@ export default {
         path: '/artist',
         query: {id: aID},
       });
+    },
+    getTracksLength: function() {
+      return this.currentAlbum["songs"].length + " Tracks"
+    },
+    getPlayLength: function() {
+      var sum = 0
+      for (const s of this.currentAlbum["songs"]) {
+        sum += s.length
+      }
+
+      var t = parseInt(sum);
+      var minute = Math.floor(t / 60);
+
+      const zeroPad = (num) => String(num).padStart(2, '0')
+      var sec = zeroPad(t % 60);
+
+      return minute + ":" + sec;
     }
   },
   watch: {
-    '$route.query.id': function() {
-      this.finishedLoading = false;
-      if (this.$route.query.id !== undefined) {
-        this.albums = this.albums.filter(a => a.id === Number(this.$route.query.id));
-        this.isSingleAlbumView = true;        
-        this.finishedLoading = true;
-        return
+    apiResp: function() {
+      this.isSingleAlbumView = false
+      if (this.currentAlbum) {
+        this.isSingleAlbumView = true
       }
-
-      this.$store.dispatch('makeApiRequest', {path: '/albums'}).then(() => {
-        this.albums = this.$store.getters.albums;
-        this.isSingleAlbumView = false;
-        this.finishedLoading = true;
-      })
+      this.finishedLoading = true
     }
   }
 }
