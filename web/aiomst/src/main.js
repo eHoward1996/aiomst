@@ -15,23 +15,6 @@ new Vue({
   watch: {
     '$route': (route) => {
       var apiPath = route.path;
-      switch (apiPath) {
-        case '/album':
-          apiPath = '/albums';
-          break;
-        case '/artist':
-          apiPath = '/artists';
-          break;
-        case '/search':
-          break;
-        case '/song':
-          apiPath = '/songs';
-          break;
-        default:
-          console.log('unknown path: ' + apiPath)
-          break;
-      }
-
       store.dispatch('makeApiRequest', {
         path: apiPath,
         params: route.query,

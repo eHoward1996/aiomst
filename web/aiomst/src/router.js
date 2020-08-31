@@ -12,9 +12,9 @@ export default new VueRouter({
   mode: 'history',
   routes: [
     {path: '/',        component: Index},
-    {path: '/album',   component: Album},
-    {path: '/artist',  component: Artist},
-    {path: '/song',    component: Song},
+    {path: '/albums',   component: Album},
+    {path: '/artists',  component: Artist},
+    {path: '/songs',    component: Song},
     {path: '/search',  component: Search}
   ]
 });
