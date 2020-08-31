@@ -45,9 +45,9 @@ export default {
     query: "",
     tabs: [
       {id: 0, name: '/',   text: 'Home'},
-      {id: 1, name: '/artist', text: 'Artists'},
-      {id: 2, name: '/album',  text: 'Albums'},
-      {id: 3, name: '/song',   text: 'Songs'},
+      {id: 1, name: '/artists', text: 'Artists'},
+      {id: 2, name: '/albums',  text: 'Albums'},
+      {id: 3, name: '/songs',   text: 'Songs'},
     ]
   }),
   methods:  {
