@@ -18,53 +18,35 @@
 </template>
 
 <script>
+import {mapGetters, mapState} from 'vuex';
 import eleCardList  from '@/components/elements/eleCardList.vue';
 import cmpntLoadBar from '@/components/layout/cmpntLoadBar.vue';
 
 export default {
   name: 'Artist',
   components: {eleCardList, cmpntLoadBar},
-  created: function() {
-    let navInfo = {
-      path: '/artists',
-      params: this.$route.query,
-    };
-
-    this.$store.dispatch('makeApiRequest', navInfo).then(() => {
-      this.artists = this.$store.getters.artists;
-      this.albums = this.$store.getters.albums;
-      this.isSingleArtistView = false;
-      if (this.artists.length === 1) {
-        this.isSingleArtistView = true;
-      }
-      this.finishedLoading = true;
-    });
-  },
   data: function() {
     return {
-      artists: null,
-      albums: null,
       finishedLoading: false,
       isSingleArtistView: false,
     }
   },
+  computed: {
+    ...mapGetters({
+      artists:       'getArtists',
+      currentArtist: 'currentArtist',
+    }),
+    ...mapState({
+      apiResp: 'gResp', 
+    })
+  },
   watch: {
-    '$route.query.id': function() {
-      this.finishedLoading = false;
-      if (this.$route.query.id !== undefined) {
-        this.artists = this.artists.filter(a => a.id === Number(this.$route.query.id));
-        this.albums = this.albums.filter(a => a.artist_id === Number(this.$route.query.id));
-        this.isSingleArtistView = true;
-        this.finishedLoading = true;
-        return
-      } 
-      
-      this.$store.dispatch('makeApiRequest', {path: '/artists'}).then(() => {
-        this.artists = this.$store.getters.artists;
-        this.albums = this.$store.getters.albums;
-        this.isSingleArtistView = false;
-        this.finishedLoading = true;
-      });
+    apiResp: function() {
+      this.isSingleArtistView = false
+      if (this.currentArtist) {
+        this.isSingleArtistView = true
+      }
+      this.finishedLoading = true
     }
   }
 }
