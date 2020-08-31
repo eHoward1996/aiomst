@@ -36,16 +36,22 @@
 </template>
 
 <script>
+import {mapGetters} from 'vuex';
+
 export default {
   name: 'eleCardList',
   props: ['req'],
   computed: {
+    ...mapGetters({
+      albums:  'getAlbums',
+      artists: 'getArtists',
+    }),
     objs() {
       switch (this.req) {
         case 'albums':
-          return this.$store.getters.albums;
+          return this.albums;
         case 'artists':
-          return this.$store.getters.artists;
+          return this.artists;
         default:
           return [];
       }
@@ -64,17 +70,8 @@ export default {
       }
     },
     objAddr: function(objId) {
-      let p = '';
-      switch (this.req) {
-        case 'albums':
-          p = 'album';
-          break;
-        case 'artists':
-          p = 'artist';
-          break;
-      }
       this.$router.push({
-        path: p, 
+        path: this.req, 
         query: {id: objId},
       })
     },

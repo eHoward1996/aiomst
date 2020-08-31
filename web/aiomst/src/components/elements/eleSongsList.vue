@@ -2,8 +2,9 @@
   <v-container fluid>
     <v-list-item-group color="primary">
       <v-list-item
-          v-for="song in songs"
+          v-for="song in getSongs"
           :key="song.id"
+          @dblclick="playSong(song)"
           :ripple="false"
           color="white">
         <v-hover>
@@ -38,17 +39,20 @@
 </template>
 
 <script>
+import { mapGetters } from 'vuex';
+
 export default {
   name: 'eleSongsList',
   computed: {
-    songs() {
-      return this.$store.getters.songs;
-    },
+    ...mapGetters({
+      getSongs:    'getSongs',
+      currentSong: 'currentSong',
+    }),
     hasObjects() {
-      return this.songs.length > 0;
+      return this.getSongs.length > 0;
     },
     hasPlayback() {
-      return this.$store.getters.currentSong;
+      return this.currentSong;
     },
   },
   methods: {
@@ -66,7 +70,9 @@ export default {
       return zeroPad(song.track)
     },
     isPlayback(song) {
-      return this.hasPlayback && this.$store.getters.currentSong.song.id === song.id;
+      return this.hasPlayback && 
+        this.currentSong.song.id === song.id &&
+        this.currentSong.howl.playing(this.currentSong.howlId);
     },
     playSong: function(song) {
       this.$store.dispatch('streamAudio', song).then(() => console.log('done'))
