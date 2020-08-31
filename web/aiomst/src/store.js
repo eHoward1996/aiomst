@@ -12,23 +12,23 @@ export const store = new Vuex.Store({
   },
   getters: {
     currentArtist: state => {
-      return state.gResp["artists"].length === 1 ? state.gResp["artists"][0] : null
+      return state.gResp["artists"].length === 1 ? state.gResp : null
     },      
-    artists: state => {
+    getArtists: state => {
       return state.gResp["artists"];
     },
 
     currentAlbum: state => {
-      return state.gResp["albums"].length === 1 ? state.gResp["albums"][0] : null
+      return state.gResp["albums"].length === 1 ? state.gResp : null
     },      
-    albums: state => {
+    getAlbums: state => {
       return state.gResp["albums"];
     },
 
     currentSong: state => {
       return state.playback
     },
-    songs: state => {
+    getSongs: state => {
       return state.gResp["songs"];
     },
   },
