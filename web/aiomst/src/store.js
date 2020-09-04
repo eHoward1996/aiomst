@@ -9,6 +9,7 @@ export const store = new Vuex.Store({
   state: {
     gResp: null,
     playback: null,
+    playlist: null,
   },
   getters: {
     currentArtist: state => {
@@ -31,14 +32,23 @@ export const store = new Vuex.Store({
     getSongs: state => {
       return state.gResp["songs"];
     },
+    getPlaylist: state => {
+      return state.playlist;
+    }
   },
   mutations: {
     changeGoResp: (state, payload) => {
       state.gResp = payload.gResp;
+      if (payload.gResp["songs"].length > 0) {
+        state.playlist = payload.gResp["songs"]
+      }
     },
-    updateSongState: (state, payload) => {
+    setSongState: (state, payload) => {
       state.playback = payload.playback
-    },      
+    },
+    setPlaylist: (state, payload) => {
+      state.playlist = payload
+    }
   },
   actions: {
     makeApiRequest: (context, navInfo) => {
@@ -87,20 +97,30 @@ export const store = new Vuex.Store({
               [response.data], 
               {type: response.headers["content-type"]}
             );
+
             var url = URL.createObjectURL(blob);
             var howlInfo = new Howl({
               src: [url],
               html5: true,
               volume: .5,
               preload: false,
-              onend: function() {
-                console.log('song completed')
+              onend: () => {
+                var list = context.getters.getPlaylist
+                var indexCurr = list.indexOf(context.getters.currentSong.song)
+                var next = list[0]
+
+                if (indexCurr + 1 < list.length) {
+                  // add playlist loop condition here possibly
+                  next = list[indexCurr + 1]
+                }
+                
+                context.dispatch('streamAudio', next)
               }
             });
       
             var howlId = howlInfo.play();            
             context.commit(
-              'updateSongState', {
+              'setSongState', {
                 'playback': {
                   'howl': howlInfo,
                   'howlId': howlId,

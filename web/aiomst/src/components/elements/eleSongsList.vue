@@ -47,6 +47,7 @@ export default {
     ...mapGetters({
       getSongs:    'getSongs',
       currentSong: 'currentSong',
+      getPlaylist: 'getPlaylist',
     }),
     hasObjects() {
       return this.getSongs.length > 0;
@@ -75,7 +76,14 @@ export default {
         this.currentSong.howl.playing(this.currentSong.howlId);
     },
     playSong: function(song) {
-      this.$store.dispatch('streamAudio', song).then(() => console.log('done'))
+      this.$store.commit('setPlaylist', this.getSongs)
+      this.$store.dispatch('streamAudio', song)
+        .then(() => {
+          console.log('stream request finished')
+        })
+        .catch((err) => {
+          console.log(err)
+        });
     },
   },
 }

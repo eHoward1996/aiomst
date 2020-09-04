@@ -4,15 +4,15 @@
 
       <v-col 
           v-if="playback" 
-          cols="2"
+          cols="3"
           order="1"
           class="player_inner_left">
 
         <v-row no-gutters style="height: 100%;">
-          <v-col cols="5" class="curr-img">
+          <v-col cols="3" class="curr-img">
             <v-row no-gutters style="height: 100%;" align-content="center">
-              <v-col cols="8">
-                <v-img :src="getArtSrc()" width="90px" height="70px"></v-img>            
+              <v-col>
+                <v-img :src="getArtSrc()" width="80px" height="70px"></v-img>            
               </v-col>
             </v-row>
           </v-col>
@@ -40,11 +40,18 @@
       </v-col>
 
       <v-col 
-          cols="8"
+          cols="6"
           order="2"
           class="player_inner_center">
         <v-row no-gutters style="height: 50%;" class="controls">
-          <v-col cols="3"></v-col>
+          <v-col cols="3">
+            <v-btn
+                v-bind:disabled="!playback"
+                icon
+                @click="playPrev">
+              <v-icon size="40">mdi-skip-previous</v-icon>
+            </v-btn>
+          </v-col>
           <v-col cols="6" align="center">
             <v-btn 
                 v-if="!isPlaying"
@@ -60,7 +67,14 @@
               <v-icon size="50">mdi-pause</v-icon>
             </v-btn>
           </v-col>
-          <v-col cols="3"></v-col>
+          <v-col cols="3">
+            <v-btn
+                v-bind:disabled="!playback"
+                icon
+                @click="playNext">
+              <v-icon size="40">mdi-skip-next</v-icon>
+            </v-btn>
+          </v-col>
         </v-row>
 
         <v-row no-gutters style="height: 50%;" class="playback">
@@ -83,7 +97,7 @@
       </v-col>
 
       <v-col 
-          cols="2"
+          cols="3"
           order="3"
           class="player_inner_right">
         <v-row no-gutters>right</v-row>
@@ -108,8 +122,9 @@ export default {
   },
   computed: {
     ...mapGetters({
-      playback: 'currentSong',
+      playback:     'currentSong',
       currentAlbum: 'currentAlbum',
+      playlist:     'getPlaylist',
     }),
     isPlaying: function() {
       if (!this.playback) {
@@ -132,6 +147,30 @@ export default {
     pause: function() {
       var howl = this.playback.howl
       howl.pause(this.playback.howlId)
+    },
+    playNext: function() {
+      var list = this.playlist
+      var indexCurr = list.indexOf(this.playback.song)
+
+      if (indexCurr + 1 >= list.length) {
+        this.$store.dispatch('streamAudio', list[0])
+          .then(() => console.log('next stream request done'))
+        return
+      }
+      this.$store.dispatch('streamAudio', list[indexCurr + 1])
+          .then(() => console.log('next stream request done'))
+    },
+    playPrev: function() {
+      var list = this.playlist
+      var indexCurr = list.indexOf(this.playback.song)
+
+      if (indexCurr - 1 < 0) {
+        this.$store.dispatch('streamAudio', list[0])
+          .then(() => console.log('prev stream request done'))
+        return
+      }
+      this.$store.dispatch('streamAudio', list[indexCurr - 1])
+          .then(() => console.log('prev stream request done'))
     },
     formatTime: function(timeToFormat) {
       var t = parseInt(timeToFormat);
@@ -183,7 +222,9 @@ export default {
       }
     },
     manualSliderChange: function(sValue) {
-      console.log(sValue)
+      var howl = this.playback.howl
+      var id = this.playback.howlId
+      howl.seek(sValue, id)
     }
   },
   watch: {
@@ -231,6 +272,7 @@ export default {
         height: 100%
         
         .curr-img
+          // border: 1px solid red
           .col
             min-width: 0
             height: 100%
@@ -243,13 +285,13 @@ export default {
             white-space: nowrap
             text-overflow: ellipsis
             font-size: 14px
-            margin: auto
-            margin-right: 15%
 
       &_center
         height: 100%
 
         .playback
+          border: 1px solid yellow
+
           .inner
             height: 100%
             align-self: center !important
@@ -258,6 +300,8 @@ export default {
             width: 100%
             align-self: center !important
 
+        .controls
+          border: 1px solid lime
 
       &_right
         border: 1px solid cyan
