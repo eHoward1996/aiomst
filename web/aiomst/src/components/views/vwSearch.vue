@@ -1,5 +1,6 @@
 <template>
-  <v-container fluid>
+  <cmpntLoadBar v-if="!finishedLoading"></cmpntLoadBar>
+  <v-container v-else fluid>
     <v-container v-if="checkArtistsInState" fluid style="width: 75%;">
       <v-row><h1>Artists <v-icon color="primary" x-large>mdi-account</v-icon></h1></v-row>
       <eleCardList req="artists"></eleCardList>
@@ -12,44 +13,63 @@
       <v-row><h1>Songs <v-icon color="primary" x-large>mdi-music-note</v-icon></h1></v-row>
       <eleSongsList></eleSongsList>
     </v-container>
+    <v-container v-if="checkNoResults">
+      <h1>No Results Found</h1>
+    </v-container>
   </v-container>
 </template>
 
 <script>
+import { mapGetters, mapState } from 'vuex';
+import cmpntLoadBar from '@/components/layout/cmpntLoadBar.vue';
 import eleCardList  from '@/components/elements/eleCardList.vue';
 import eleSongsList from '@/components/elements/eleSongsList.vue';
 
 export default {
   name: 'Search',
-  components: {eleCardList, eleSongsList},
-  computed: {
-    checkArtistsInState: function() {
-      return this.artists;
-    },
-    checkAlbumsInState: function() {
-      return this.albums;
-    },
-    checkSongsInState: function() {
-      return this.songs;
-    },
-  },
-  created: function() {
-    let navInfo = {
-      path: '/search',
-      params: this.$route.query,
-    };
-    this.$store.dispatch('makeApiRequest', navInfo).then(() => {
-      this.artists = this.$store.getters.artists;
-      this.albums = this.$store.getters.albums;
-      this.songs = this.$store.getters.songs;
-    });
-  },
+  components: {cmpntLoadBar, eleCardList, eleSongsList},
   data: function() {
     return {
-      artists: null,
-      albums: null,
-      songs: null
+      finishedLoading: false,
     }
   },
+  computed: {
+    ...mapGetters({
+      artists: 'getArtists',
+      albums:  'getAlbums',
+      songs:   'getSongs',
+    }),
+    ...mapState({
+      apiResp: 'gResp', 
+    }),
+    checkArtistsInState: function() {
+      if (!this.artists) {
+        return false
+      }
+      return this.artists.length > 0;
+    },
+    checkAlbumsInState: function() {
+      if (!this.albums) {
+        return false
+      }
+      return this.albums.length > 0;
+    },
+    checkSongsInState: function() {
+      if (!this.songs) {
+        return false
+      }
+      return this.songs.length > 0;
+    },
+    checkNoResults: function() {
+      return this.artists.length === 0 &&
+             this.albums.length === 0 && 
+             this.songs.length === 0
+    }
+  },
+  watch: {
+    apiResp: function() {
+      this.finishedLoading = true
+    }
+  }
 }
 </script>
