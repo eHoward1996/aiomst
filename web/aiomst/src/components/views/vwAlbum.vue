@@ -74,7 +74,7 @@ export default {
     artistAddr: function() {
       let aID = this.albums[0].artistId;
       this.$router.push({
-        path: '/artist',
+        path: '/artists',
         query: {id: aID},
       });
     },
