@@ -5,7 +5,11 @@
           v-bind:disabled="!playback"
           icon
           @click="shuffle">
-        <v-icon size="20">mdi-shuffle-variant</v-icon>
+        <v-icon 
+            size="20"
+            :color="shuffleIcon">
+          mdi-shuffle-variant
+        </v-icon>
       </v-btn>
     </v-col>
     <v-col cols="1" align="center">
@@ -65,6 +69,8 @@ export default {
       progress: 0,
       sliderValue: 0,
       progressInterval: null,
+      isShuffled: false,
+      originalPlaylist: null,
     }
   },
   computed: {
@@ -94,6 +100,9 @@ export default {
         default:
           return 'mdi-infinity'
       }
+    },
+    shuffleIcon: function() {
+      return this.isShuffled ? 'green darken-2' : 'white'
     }
   },
   methods: {
@@ -130,7 +139,32 @@ export default {
           .then(() => console.log('prev stream request done'))
     },
     shuffle: function() {
-      console.log('shuffle')
+      function randomize(a) {
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      if (!this.isShuffled) {
+        // Only set the original playlist once! Anything more and we could lose 
+        // the original order.
+        if (!this.originalPlaylist) {
+          this.originalPlaylist = this.playlist
+        }
+
+        var list = this.playlist.slice()
+        var indexCurr = list.indexOf(this.playback.song)
+        var songCurr = list.splice(indexCurr, 1)
+        list = randomize(list)
+        this.$store.commit('setPlaylist', songCurr.concat(list))
+        this.isShuffled = true
+        return
+      }
+      
+      this.$store.commit('setPlaylist', this.originalPlaylist)
+      this.isShuffled = false
     },
     loop: function()  {
       this.$store.commit('updateReplayState')
