@@ -15,6 +15,10 @@ new Vue({
   watch: {
     '$route': (route) => {
       var apiPath = route.path;
+      if (apiPath === '/') {
+        return
+      }
+      
       store.dispatch('makeApiRequest', {
         path: apiPath,
         params: route.query,
