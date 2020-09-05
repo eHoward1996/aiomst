@@ -12,7 +12,7 @@
 
 <script>
 import cmpntAppBar from '@/components/layout/cmpntAppBar.vue';
-import elePlayerBar from '@/components/player/currentTrack.vue';
+import elePlayerBar from '@/components/player/index.vue';
 
 export default {
   name: 'App',
