@@ -44,7 +44,13 @@
           v-bind:disabled="!playback"
           icon
           @click="loop">
-        <v-icon size="20">mdi-sync</v-icon>
+        <v-badge
+            color=""
+            :icon="replayIcon"
+            overlap
+            bottom>
+          <v-icon size="20">mdi-sync</v-icon>
+        </v-badge>
       </v-btn>
     </v-col>
   </v-row>
@@ -67,9 +73,6 @@ export default {
       currentAlbum: 'currentAlbum',
       playlist:     'getPlaylist',
     }),
-    // ...mapMutations([
-    //   'updateReplayState',
-    // ]),
     isPlaying: function() {
       if (!this.playback) {
         return false
@@ -82,6 +85,16 @@ export default {
       }
       return this.playback.song.length
     },
+    replayIcon: function() {
+      switch (this.$store.state.replayState) {
+        case 0:
+          return ''
+        case 1:
+          return  'mdi-numeric-1-circle'
+        default:
+          return 'mdi-infinity'
+      }
+    }
   },
   methods: {
     play: function() {
@@ -121,13 +134,10 @@ export default {
     },
     loop: function()  {
       this.$store.commit('updateReplayState')
-      console.log('updated replay state', this.$store.state.replayState)
     }
   },
 }
 </script>
 
 <style scoped lang="sass">
-  .col
-    border: 1px solid red
 </style>
