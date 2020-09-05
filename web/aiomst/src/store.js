@@ -112,21 +112,33 @@ export const store = new Vuex.Store({
 
                 switch (context.state.replayState) {
                   case 0:
+                    // If the current song is the last in the playlist
+                    // end playback
                     if (indexCurr === list.length - 1) {
                       return
                     }
+
+                    // Else, get playback for the next song
                     next = list[indexCurr + 1]
                     break
+                  case 2:
+                    // If there is a "next" song, create playback for it
+                    if (indexCurr + 1 < list.length) {
+                      next = list[indexCurr + 1]
+                      break
+                    }
+                    // If the current song is the last song in a playlist with
+                    // length > 1 use "default" next value (list[0])
+                    else if (list.length !== 1) {
+                      break;
+                    }
+                    // Fallthrough if there is only 1 song in the playlist.
                   case 1:
+                    // Stop (seek(0)) and start the song
                     var howlObj = context.state.playback.howl;
                     howlObj.stop()
                     howlObj.play(context.state.playback.howlId)
                     return
-                  case 2:
-                    if (indexCurr + 1 < list.length) {
-                      next = list[indexCurr + 1]
-                    }
-                    break
                 }
                 context.dispatch('streamAudio', next)
               }
