@@ -10,6 +10,7 @@ export const store = new Vuex.Store({
     gResp: null,
     playback: null,
     playlist: null,
+    replayState: 0,
   },
   getters: {
     currentArtist: state => {
@@ -39,15 +40,15 @@ export const store = new Vuex.Store({
   mutations: {
     changeGoResp: (state, payload) => {
       state.gResp = payload.gResp;
-      if (payload.gResp["songs"].length > 0) {
-        state.playlist = payload.gResp["songs"]
-      }
     },
     setSongState: (state, payload) => {
       state.playback = payload.playback
     },
     setPlaylist: (state, payload) => {
       state.playlist = payload
+    },
+    updateReplayState: (state) => {
+      state.replayState = state.replayState === 2 ? 0 : state.replayState + 1
     }
   },
   actions: {
@@ -109,11 +110,24 @@ export const store = new Vuex.Store({
                 var indexCurr = list.indexOf(context.getters.currentSong.song)
                 var next = list[0]
 
-                if (indexCurr + 1 < list.length) {
-                  // add playlist loop condition here possibly
-                  next = list[indexCurr + 1]
+                switch (context.state.replayState) {
+                  case 0:
+                    if (indexCurr === list.length - 1) {
+                      return
+                    }
+                    next = list[indexCurr + 1]
+                    break
+                  case 1:
+                    var howlObj = context.state.playback.howl;
+                    howlObj.stop()
+                    howlObj.play(context.state.playback.howlId)
+                    return
+                  case 2:
+                    if (indexCurr + 1 < list.length) {
+                      next = list[indexCurr + 1]
+                    }
+                    break
                 }
-                
                 context.dispatch('streamAudio', next)
               }
             });
