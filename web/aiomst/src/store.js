@@ -9,46 +9,83 @@ export const store = new Vuex.Store({
   state: {
     gResp: null,
     playback: null,
-    playlist: null,
+    playlist: {},
     replayState: 0,
+    shuffleState: false,
   },
   getters: {
     currentArtist: state => {
-      return state.gResp["artists"].length === 1 ? state.gResp : null
+      return state.gResp['artists'].length === 1 ? state.gResp : null
     },      
     getArtists: state => {
-      return state.gResp["artists"];
+      return state.gResp['artists'];
     },
 
     currentAlbum: state => {
-      return state.gResp["albums"].length === 1 ? state.gResp : null
+      return state.gResp['albums'].length === 1 ? state.gResp : null
     },      
     getAlbums: state => {
-      return state.gResp["albums"];
+      return state.gResp['albums'];
     },
 
     currentSong: state => {
       return state.playback
     },
     getSongs: state => {
-      return state.gResp["songs"];
+      return state.gResp['songs'];
     },
     getPlaylist: state => {
-      return state.playlist;
+      return state.shuffleState ? state.playlist.shuffled : state.playlist.origin;
     }
   },
   mutations: {
     changeGoResp: (state, payload) => {
-      state.gResp = payload.gResp;
+      Vue.set(state, 'gResp', payload.gResp)
     },
     setSongState: (state, payload) => {
-      state.playback = payload.playback
+      Vue.set(state, 'playback', payload.playback)
     },
     setPlaylist: (state, payload) => {
-      state.playlist = payload
+      function randomize(a) {
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      Vue.set(state.playlist, 'origin', payload)
+      if (state.shuffleState) {
+        var list = state.playlist.origin.slice()
+        var indexCurr = list.indexOf(state.playback.song)
+        var songCurr = list.splice(indexCurr, 1)
+        
+        Vue.set(state.playlist, 'shuffled', songCurr.concat(randomize(list)))
+      }
     },
     updateReplayState: (state) => {
-      state.replayState = state.replayState === 2 ? 0 : state.replayState + 1
+      Vue.set(
+        state,
+        'replayState',
+        state.replayState === 2 ? 0 : state.replayState + 1)
+    },
+    updateShuffleState: (state) => {
+      function randomize(a) {
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      Vue.set(state, 'shuffleState', !state.shuffleState)
+      if (state.shuffleState) {
+        var list = state.playlist.origin.slice()
+        var indexCurr = list.indexOf(state.playback.song)
+        var songCurr = list.splice(indexCurr, 1)
+        
+        Vue.set(state.playlist, 'shuffled', songCurr.concat(randomize(list)))
+      }
     }
   },
   actions: {
@@ -56,7 +93,7 @@ export const store = new Vuex.Store({
       return new Promise((resolve, reject) => {
         axios
           .get(navInfo.path, {
-            baseURL: "http://127.0.0.1:8090",
+            baseURL: 'http://127.0.0.1:8090',
             params: navInfo.params,
           })
           .then((x) => {
@@ -81,11 +118,11 @@ export const store = new Vuex.Store({
       
       return new Promise((resolve, reject) => {
         axios
-          .get("http://localhost:8090/stream?id=" + song.id, {
+          .get('http://localhost:8090/stream?id=' + song.id, {
             headers: {
-              "Accept": "text/event-stream",
+              'Accept': 'text/event-stream',
             },
-            responseType: "arraybuffer"
+            responseType: 'arraybuffer'
           })
           .then(response => {
             // If there is a song playing, stop it
@@ -96,7 +133,7 @@ export const store = new Vuex.Store({
                   
             var blob = new Blob(
               [response.data], 
-              {type: response.headers["content-type"]}
+              {type: response.headers['content-type']}
             );
 
             var url = URL.createObjectURL(blob);
@@ -122,13 +159,13 @@ export const store = new Vuex.Store({
                     next = list[indexCurr + 1]
                     break
                   case 2:
-                    // If there is a "next" song, create playback for it
+                    // If there is a 'next' song, create playback for it
                     if (indexCurr + 1 < list.length) {
                       next = list[indexCurr + 1]
                       break
                     }
                     // If the current song is the last song in a playlist with
-                    // length > 1 use "default" next value (list[0])
+                    // length > 1 use 'default' next value (list[0])
                     else if (list.length !== 1) {
                       break;
                     }

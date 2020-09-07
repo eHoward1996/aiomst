@@ -69,8 +69,6 @@ export default {
       progress: 0,
       sliderValue: 0,
       progressInterval: null,
-      isShuffled: false,
-      originalPlaylist: null,
     }
   },
   computed: {
@@ -102,7 +100,7 @@ export default {
       }
     },
     shuffleIcon: function() {
-      return this.isShuffled ? 'green darken-2' : 'white'
+      return this.$store.state.shuffleState ? 'green darken-2' : 'white'
     }
   },
   methods: {
@@ -139,32 +137,7 @@ export default {
           .then(() => console.log('prev stream request done'))
     },
     shuffle: function() {
-      function randomize(a) {
-        for (let i = a.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [a[i], a[j]] = [a[j], a[i]];
-        }
-        return a;
-      }
-
-      if (!this.isShuffled) {
-        // Only set the original playlist once! Anything more and we could lose 
-        // the original order.
-        if (!this.originalPlaylist) {
-          this.originalPlaylist = this.playlist
-        }
-
-        var list = this.playlist.slice()
-        var indexCurr = list.indexOf(this.playback.song)
-        var songCurr = list.splice(indexCurr, 1)
-        list = randomize(list)
-        this.$store.commit('setPlaylist', songCurr.concat(list))
-        this.isShuffled = true
-        return
-      }
-      
-      this.$store.commit('setPlaylist', this.originalPlaylist)
-      this.isShuffled = false
+      this.$store.commit('updateShuffleState')
     },
     loop: function()  {
       this.$store.commit('updateReplayState')

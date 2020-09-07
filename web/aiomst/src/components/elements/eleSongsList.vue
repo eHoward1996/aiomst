@@ -76,10 +76,10 @@ export default {
         this.currentSong.howl.playing(this.currentSong.howlId);
     },
     playSong: function(song) {
-      this.$store.commit('setPlaylist', this.getSongs)
       this.$store.dispatch('streamAudio', song)
         .then(() => {
           console.log('stream request finished')
+          this.$store.commit('setPlaylist', this.getSongs)
         })
         .catch((err) => {
           console.log(err)
