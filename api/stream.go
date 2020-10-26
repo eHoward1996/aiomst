@@ -6,7 +6,7 @@ import (
 	"log"
 	"strconv"
 
-	"aiomst/db"
+	"github.com/eHoward1996/aiomst/db"
 
 	"github.com/gin-gonic/gin"
 )

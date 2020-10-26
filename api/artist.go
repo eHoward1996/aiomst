@@ -1,11 +1,12 @@
 package api
 
 import (
-	"aiomst/db"
 	"database/sql"
 	"fmt"
 	"log"
 	"strconv"
+
+	"github.com/eHoward1996/aiomst/db"
 
 	"github.com/gin-gonic/gin"
 )

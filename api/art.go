@@ -1,13 +1,14 @@
 package api
 
 import (
-	"aiomst/db"
 	"bytes"
 	"database/sql"
 	"image"
 	"image/jpeg"
 	"image/png"
 	"strconv"
+
+	"github.com/eHoward1996/aiomst/db"
 
 	"github.com/gin-gonic/gin"
 )
