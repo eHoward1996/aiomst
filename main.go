@@ -6,8 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"aiomst/core"
-	"aiomst/util"
+	"github.com/eHoward1996/aiomst/core"
+	"github.com/eHoward1996/aiomst/util"
 )
 
 func main()	{
