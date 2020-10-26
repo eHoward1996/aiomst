@@ -2,10 +2,11 @@ package core
 
 import (
 	// "errors"
-	"aiomst/fs"
-	"aiomst/util"
 	"log"
 	"time"
+
+	"github.com/eHoward1996/aiomst/fs"
+	"github.com/eHoward1996/aiomst/util"
 
 	"github.com/radovskyb/watcher"
 )

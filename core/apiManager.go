@@ -1,13 +1,14 @@
 package core
 
 import (
-	"aiomst/api"
-	"aiomst/util"
 	"fmt"
 	"log"
 	"net/http"
 	"runtime"
 	"time"
+
+	"github.com/eHoward1996/aiomst/api"
+	"github.com/eHoward1996/aiomst/util"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"

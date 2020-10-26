@@ -1,10 +1,11 @@
 package db
 
 import (
-	"aiomst/util"
 	"log"
 	"os"
 	"path"
+
+	"github.com/eHoward1996/aiomst/util"
 
 	"github.com/jmoiron/sqlx"
 

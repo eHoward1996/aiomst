@@ -1,8 +1,9 @@
 package core
 
 import (
-	"aiomst/util"
 	"log"
+
+	"github.com/eHoward1996/aiomst/util"
 )
 
 var dbKillChan, fsKillChan chan struct{}

@@ -1,10 +1,11 @@
 package core
 
 import (
-	"aiomst/db"
-	"aiomst/util"
 	"log"
 	"os"
+
+	"github.com/eHoward1996/aiomst/db"
+	"github.com/eHoward1996/aiomst/util"
 )
 
 func dbManager(conf util.Config, dbLaunchChan, dbKillChan chan struct{})	{
