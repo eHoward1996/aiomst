@@ -12,6 +12,7 @@ export const store = new Vuex.Store({
     playlist: {},
     replayState: 0,
     shuffleState: false,
+    universalVol: .5,
   },
   getters: {
     currentArtist: state => {
@@ -36,6 +37,10 @@ export const store = new Vuex.Store({
     },
     getPlaylist: state => {
       return state.shuffleState ? state.playlist.shuffled : state.playlist.origin;
+    },
+
+    getUniversalVol: state => {
+      return state.universalVol;
     }
   },
   mutations: {
@@ -86,6 +91,10 @@ export const store = new Vuex.Store({
         
         Vue.set(state.playlist, 'shuffled', songCurr.concat(randomize(list)))
       }
+    },
+
+    setUniversalVol: (state, payload) => {
+      Vue.set(state, 'universalVol', payload);
     }
   },
   actions: {
@@ -140,7 +149,7 @@ export const store = new Vuex.Store({
             var howlInfo = new Howl({
               src: [url],
               html5: true,
-              volume: .5,
+              volume: context.state.universalVol,
               preload: false,
               onend: () => {
                 var list = context.getters.getPlaylist

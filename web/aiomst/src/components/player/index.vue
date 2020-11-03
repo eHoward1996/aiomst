@@ -9,7 +9,7 @@
         <playback></playback>
       </v-col>
       <v-col cols="2" class="player_inner_right">
-        right
+        <ctrlRight></ctrlRight>
       </v-col>
     </v-row>
   </v-container>
@@ -19,10 +19,11 @@
 import currentInfo  from '@/components/player/currentInfo.vue';
 import controls     from '@/components/player/controls.vue';
 import playback     from '@/components/player/playback.vue';
+import ctrlRight    from '@/components/player/ctrlRight.vue';
 
 export default {
   name: 'elePlayerBar',
-  components: {currentInfo, controls, playback}
+  components: {currentInfo, controls, playback, ctrlRight}
 }
 </script>
 
