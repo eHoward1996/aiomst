@@ -65,7 +65,8 @@ func (s *SqlBackend) AlbumsForArtist(ID int) ([]Album, error) {
 // titles that match the specified search query
 func (s *SqlBackend) SearchAlbums(query string) ([]Album, error) {
 	return s.albumQuery("SELECT albums.*,artists.title AS artist FROM albums "+
-		"JOIN artists ON albums.artist_id = artists.id WHERE albums.title LIKE ?;", "%"+query+"%")
+		"JOIN artists ON albums.artist_id = artists.id WHERE " +
+		"albums.normalized_title LIKE ?;", "%"+query+"%")
 }
 
 // CountAlbums fetches the total number of Album structs from the database
@@ -115,9 +116,11 @@ func (s *SqlBackend) LoadAlbum(a *Album) (Album, error) {
 func (s *SqlBackend) SaveAlbum(a *Album) error {
 	// Insert new album
 	query := "INSERT INTO albums " +
-		"(`art_id`, `artist_id`, `folder_id`, `title`, `year`) VALUES (?, ?, ?, ?, ?);"
+		"(`art_id`, `artist_id`, `folder_id`, `title`, `normalized_title`, `year`)" +
+		" VALUES (?, ?, ?, ?, ?, ?);"
 	tx := s.db.MustBegin()
-	tx.Exec(query, a.ArtID, a.ArtistID, a.FolderID, a.Title, a.Year);
+	tx.Exec(query,
+		a.ArtID, a.ArtistID, a.FolderID, a.Title, a.NormalizedTitle, a.Year);
 	
 	// Commit transaction
 	if err := tx.Commit(); err != nil {

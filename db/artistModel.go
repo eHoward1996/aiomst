@@ -2,10 +2,11 @@ package db
 
 // Artist represents an artist in the db and contains a unique ID and name
 type Artist struct {
-	ID    		int    	`json:"id"`
-	ArtID  		int 		`db:"art_id" json:"artId"` 
-	FolderID 	int 		`db:"folder_id" json:"folderId"`
-	Title 		string 	`db:"title" json:"title"`
+	ID    		      int    	`json:"id"`
+	ArtID  		      int 		`db:"art_id" json:"artId"` 
+	FolderID 	      int 		`db:"folder_id" json:"folderId"`
+	Title 		      string 	`db:"title" json:"title"`
+	NormalizedTitle string  `db:"normalized_title" json:"normalizedTitle"`
 }
 
 // GetArtistFromSong creates a new Artist from a Song model, extracting its

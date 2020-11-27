@@ -67,25 +67,26 @@ var MIMEMap = map[int]string{
 // Song represents a song known to wavepipe, and contains metadata regarding
 // the song, and where it resides in the filsystem
 type Song struct {
-	ID           int    `json:"id"`
-	Album        string `json:"album"`
-	AlbumID      int    `db:"album_id" json:"albumId"`
-	Artist       string `json:"artist"`
-	ArtistID     int    `db:"artist_id" json:"artistId"`
-	Bitrate      int    `json:"bitrate"`
-	Channels     int    `json:"channels"`
-	Comment      string `json:"comment"`
-	FileName     string `db:"file_name" json:"fileName"`
-	FileSize     int64  `db:"file_size" json:"fileSize"`
-	FileTypeID   int    `db:"file_type_id" json:"fileTypeId"`
-	FolderID     int    `db:"folder_id" json:"folderId"`
-	Genre        string `json:"genre"`
-	LastModified int64  `db:"last_modified" json:"lastModified"`
-	Length       int    `json:"length"`
-	SampleRate   int    `db:"sample_rate" json:"sampleRate"`
-	Title        string `json:"title"`
-	Track        int    `json:"track"`
-	Year         int    `json:"year"`
+	ID              int    `json:"id"`
+	Album           string `json:"album"`
+	AlbumID         int    `db:"album_id" json:"albumId"`
+	Artist          string `json:"artist"`
+	ArtistID        int    `db:"artist_id" json:"artistId"`
+	Bitrate         int    `json:"bitrate"`
+	Channels        int    `json:"channels"`
+	Comment         string `json:"comment"`
+	FileName        string `db:"file_name" json:"fileName"`
+	FileSize        int64  `db:"file_size" json:"fileSize"`
+	FileTypeID      int    `db:"file_type_id" json:"fileTypeId"`
+	FolderID        int    `db:"folder_id" json:"folderId"`
+	Genre           string `json:"genre"`
+	LastModified    int64  `db:"last_modified" json:"lastModified"`
+	Length          int    `json:"length"`
+	SampleRate      int    `db:"sample_rate" json:"sampleRate"`
+	Title           string `json:"title"`
+	NormalizedTitle string `db:"normalized_title" json:"normalizedTitle"`   
+	Track           int    `json:"track"`
+	Year            int    `json:"year"`
 }
 
 // SongFromFile creates a new Song from a file, extracting its tags and properties
@@ -103,6 +104,11 @@ func SongFromFile(file string) (*Song, error) {
 	// Retrieve some tags needed by aiomst, check for empty
 	// At minimum, we will need an artist and title to do anything useful with this file
 	title  := props["title"]
+	normalizedTitle, err := normalizeString(title)
+	if err != nil {
+		errs += err.Error()
+	}
+
 	artist := props["albumartist"]
 	album  := props["album"]
 	if title == "" {
@@ -151,17 +157,18 @@ func SongFromFile(file string) (*Song, error) {
 
 	// Copy over fields from TagLib tags and properties, as well as OS information
 	return &Song{
-		Album:      album,
-		Artist:     artist,
-		Bitrate:    bitrate,
-		Channels:   channels,
-		Comment:    comments,
-		Genre:      props["genre"],
-		Length:     length,
-		SampleRate: sampleRate,
-		Title:      title,
-		Track:      trackNum,
-		Year:       year,
+		Album:           album,
+		Artist:          artist,
+		Bitrate:         bitrate,
+		Channels:        channels,
+		Comment:         comments,
+		Genre:           props["genre"],
+		Length:          length,
+		SampleRate:      sampleRate,
+		Title:           title,
+		NormalizedTitle: normalizedTitle,
+		Track:           trackNum,
+		Year:            year,
 	}, err
 }
 

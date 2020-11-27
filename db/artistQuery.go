@@ -53,7 +53,8 @@ func (s *SqlBackend) LimitArtists(offset int, count int) ([]Artist, error) {
 // SearchArtists loads a slice of all Artist structs from the database which contain
 // titles that match the specified search query
 func (s *SqlBackend) SearchArtists(query string) ([]Artist, error) {
-	return s.artistQuery("SELECT * FROM artists WHERE title LIKE ?;", "%"+query+"%")
+	return s.artistQuery("SELECT * FROM artists WHERE normalized_title LIKE ?;",
+		"%"+query+"%")
 }
 
 // CountArtists fetches the total number of Artist structs from the database
@@ -98,9 +99,10 @@ func (s *SqlBackend) LoadArtist(a *Artist) (Artist, error) {
 // SaveArtist attempts to save an Artist to the database
 func (s *SqlBackend) SaveArtist(a *Artist) error {
 	// Insert new artist
-	query := "INSERT INTO artists (art_id, folder_id, title) VALUES (?, ?, ?);"
+	query := "INSERT INTO artists (art_id, folder_id, title, normalized_title) " +
+	"VALUES (?, ?, ?, ?);"
 	tx := s.db.MustBegin()
-	tx.Exec(query, a.ArtID, a.FolderID, a.Title)
+	tx.Exec(query, a.ArtID, a.FolderID, a.Title, a.NormalizedTitle)
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {

@@ -68,7 +68,7 @@ func (s *SqlBackend) RandomSongs(n int) ([]Song, error) {
 func (s *SqlBackend) SearchSongs(query string) ([]Song, error) {
 	return s.songQuery("SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
 		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-		"WHERE songs.title LIKE ?;", "%"+query+"%")
+		"WHERE songs.normalized_title LIKE ?;", "%"+query+"%")
 }
 
 // SongsForAlbum loads a slice of all Song structs which have the matching album ID
@@ -161,12 +161,12 @@ func (s *SqlBackend) SaveSong(a *Song) error {
 	query := "INSERT INTO songs (album_id, artist_id, bitrate, " + 
 		"channels, comment, file_name, file_size, file_type_id, " +
 		"folder_id, genre, last_modified, length, sample_rate, " + 
-		"title, track, year) " +
-		"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
+		"title, normalized_title, track, year) " +
+		"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
 	tx := s.db.MustBegin()
 	tx.Exec(query, a.AlbumID, a.ArtistID, a.Bitrate, a.Channels, a.Comment, 
 		a.FileName, a.FileSize, a.FileTypeID,	a.FolderID, a.Genre, a.LastModified,
-		a.Length, a.SampleRate, a.Title, a.Track, a.Year)
+		a.Length, a.SampleRate, a.Title, a.NormalizedTitle, a.Track, a.Year)
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
