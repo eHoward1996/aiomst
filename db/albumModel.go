@@ -16,9 +16,10 @@ type Album struct {
 // fields as needed to build the struct
 func GetAlbumFromSong(song *Song) *Album {
 	return &Album{
-		Artist: song.Artist,
-		Title:  song.Album,
-		Year:   song.Year,
+		Artist:          song.Artist,
+		Title:           song.Album,
+		NormalizedTitle: normalizeString(song.Album),
+		Year:            song.Year,
 	}
 }
 

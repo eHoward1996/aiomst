@@ -104,11 +104,8 @@ func SongFromFile(file string) (*Song, error) {
 	// Retrieve some tags needed by aiomst, check for empty
 	// At minimum, we will need an artist and title to do anything useful with this file
 	title  := props["title"]
-	normalizedTitle, err := normalizeString(title)
-	if err != nil {
-		errs += err.Error()
-	}
-
+	normalizedTitle := normalizeString(title)
+	
 	artist := props["albumartist"]
 	album  := props["album"]
 	if title == "" {

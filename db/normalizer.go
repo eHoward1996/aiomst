@@ -1,6 +1,7 @@
 package db
 
 import (
+	"log"
 	"unicode"
 
 	"golang.org/x/text/transform"
@@ -8,7 +9,7 @@ import (
 )
 
 // normalizeString removes accent marks from strings.
-func normalizeString(s string) (string, error) {
+func normalizeString(s string) string 	{
 	isMn := func(r rune) bool {
 		return unicode.Is(unicode.Mn, r) // Mn: nonspacing marks
 	}
@@ -16,8 +17,9 @@ func normalizeString(s string) (string, error) {
 	t := transform.Chain(norm.NFD, transform.RemoveFunc(isMn), norm.NFC)
 	result, _, err := transform.String(t, s)
 	if err != nil {
-		return s, err
+		log.Printf("DB: Normalize String: %s with value %s", err, s)
+		return s
 	}
 
-	return result, nil
+	return result
 }

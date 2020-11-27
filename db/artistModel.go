@@ -12,9 +12,10 @@ type Artist struct {
 // GetArtistFromSong creates a new Artist from a Song model, extracting its
 // fields as needed to build the struct
 func GetArtistFromSong(song *Song) *Artist {
-	// Copy the artist name to title
+	// Copy the artist name to 
 	return &Artist{
-		Title: song.Artist,
+		Title:           song.Artist,
+		NormalizedTitle: normalizeString(song.Artist),
 	}
 }
 
