@@ -99,10 +99,13 @@ func (s *SqlBackend) LoadArtist(a *Artist) (Artist, error) {
 // SaveArtist attempts to save an Artist to the database
 func (s *SqlBackend) SaveArtist(a *Artist) error {
 	// Insert new artist
-	query := "INSERT INTO artists (art_id, folder_id, title, normalized_title) " +
-	"VALUES (?, ?, ?, ?);"
+	query := "INSERT INTO artists " + 
+	"(art_id, mb_id, metadata_id, folder_id, title, normalized_title) " +
+	"VALUES (?, ?, ?, ?, ?, ?);"
 	tx := s.db.MustBegin()
-	tx.Exec(query, a.ArtID, a.FolderID, a.Title, a.NormalizedTitle)
+	tx.MustExec(
+		query,
+		a.ArtID, a.MBID, a.MetadataID, a.FolderID, a.Title, a.NormalizedTitle)
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
@@ -127,6 +130,15 @@ func (s *SqlBackend) UpdateArtistArt(a *Artist) error {
 	tx.Exec(query, a.ArtID, a.ID)
 	return tx.Commit()
 }
+
+// UpdateArtistMetadata updates the Albums metadataId
+func (s *SqlBackend) UpdateArtistMetadata(a *Artist) error {
+	query := "UPDATE artists SET metadata_id = ? WHERE id = ?;"
+	tx := s.db.MustBegin()
+	tx.Exec(query, a.MetadataID, a.ID)
+	return tx.Commit()
+}
+
 
 // PurgeOrphanArtists deletes all artists who are "orphaned", meaning that they no
 // longer have any songs which reference their ID

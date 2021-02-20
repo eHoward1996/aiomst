@@ -41,12 +41,12 @@ func (s *SqlBackend) AllArt() ([]Art, error)	{
 
 // ArtInPath loads a slice of all Art structs contained within the specified file path
 func (s *SqlBackend) ArtInPath(path string) ([]Art, error) {
-	return s.artQuery("SELECT * FROM art WHERE file_name LIKE ?;", path+"%")
+	return s.artQuery("SELECT * FROM art WHERE path LIKE ?;", path+"%")
 }
 
 // ArtNotInPath loads a slice of all Art structs NOT contained within the specified file path
 func (s *SqlBackend) ArtNotInPath(path string) ([]Art, error) {
-	return s.artQuery("SELECT * FROM art WHERE file_name NOT LIKE ?;", path+"%")
+	return s.artQuery("SELECT * FROM art WHERE path NOT LIKE ?;", path+"%")
 }
 
 // CountArt fetches the total number of Art structs from the database
@@ -70,14 +70,16 @@ func (s *SqlBackend) LoadArt(a *Art) (Art, error) {
 	// Load the artist via ID if available
 	r := *a
 	if a.ID != 0 {
-		if err := s.db.Get(&r, "SELECT * FROM art WHERE id = ?;", a.ID); err != nil {
+		if err := s.db.Get(&r, "SELECT * FROM art WHERE id = ?;", a.ID);
+		err != nil {
 			return Art{}, err
 		}
 		return r, nil
 	}
 
 	// Load via file name
-	if err := s.db.Get(&r, "SELECT * FROM art WHERE file_name = ?;", a.FileName); err != nil {
+	if err := s.db.Get(&r, "SELECT * FROM art WHERE path = ?;", a.Path);
+	err != nil {
 		return Art{}, err
 	}
 	return r, nil
@@ -86,9 +88,10 @@ func (s *SqlBackend) LoadArt(a *Art) (Art, error) {
 // SaveArt attempts to save Art to the database
 func (s *SqlBackend) SaveArt(a *Art) error {
 	// Insert new artist
-	query := "INSERT INTO art (`file_name`, `file_size`, `last_modified`) VALUES (?, ?, ?);"
+	query := "INSERT INTO art " +
+	"(path, file_size, last_modified) VALUES (?, ?, ?);"
 	tx := s.db.MustBegin()
-	tx.Exec(query, a.FileName, a.FileSize, a.LastModified)
+	tx.Exec(query, a.Path, a.FileSize, a.LastModified)
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {

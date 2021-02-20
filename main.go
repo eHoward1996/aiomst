@@ -32,11 +32,6 @@ func main()	{
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	// for sig := range sigChan {
-	// 	log.Println("AIOMST: caught signal: ", sig)
-	// 	killChan <- struct{}{}
-	// 	break
-	// }
 
 	go func()	{
 		for sig := range sigChan {

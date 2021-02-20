@@ -1,5 +1,17 @@
 package fs
 
+import "github.com/eHoward1996/aiomst/db"
+
+// Constant MBID Values
+const errMBIDStartValue       = "errored"
+const errNoClient             = "400:Client Not Available"
+const errNoInfo               = "500:Info Not Available"
+const errUnexpectedTermLength = "600:Unexpected Number of Terms"
+const errConfidenceTooLow     = "200:Confidence Scores Too Low"
+
+// The name of the default metadata file
+const metadataFile = "metadata"
+
 // imgType is a set of valid file extensions for images
 var imgType = map[string]bool	{
 	".jpg"  : true,
@@ -19,11 +31,18 @@ var audioType = map[string]bool {
 	".wv"  : true,
 }
 
-// AttachesArt is either a db.Album or db.Artist. Both implement a method
-// to update a row in the database with an ArtID. 
+// AttachesArt is either a db.Album or db.Artist. Both implement methods
+// to get an Art object by ID and set the objects ArtId. 
 type AttachesArt interface {
-	GetArtID()    int
+	GetArt()	(*db.Art, error)
 	SetArtID(int) error
+}
+
+// HasMetadata is either a db.Album or db.Artist. Both implement methods to get 
+// and set Metadata (by ID).
+type HasMetadata interface {
+	GetMetadata() (*db.Metadata, error)
+	SetMetadataID(int) error
 }
 
 // Task is an interface that defines a filesystem task

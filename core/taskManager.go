@@ -21,7 +21,7 @@ func TaskManager(killChan chan struct{}, exitChan chan int)	{
 	<- dbLaunchFinishChan
 
 	fsKillChan := make(chan struct{})
-	go fsManager(config.MediaFolderPath(), fsKillChan)
+	go fsManager(config.MediaFolderPath(), config.SqlFilePath(), fsKillChan)
 
 	apiKillChan := make(chan struct{})
 	go apiManager(apiKillChan)

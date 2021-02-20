@@ -8,6 +8,12 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+// MusicObjectInfo is an interface that represents struct or objects that MusicBrainz
+// can identify
+type MusicObjectInfo interface {
+	ToString() string
+}
+
 // normalizeString removes accent marks from strings.
 func normalizeString(s string) string 	{
 	isMn := func(r rune) bool {

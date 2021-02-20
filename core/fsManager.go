@@ -20,7 +20,7 @@ var fsTaskCount = 0
 // Initialize a queue to cancel filesystem tasks
 var cancelQueue = make(chan chan struct{}, 10)
 
-func fsManager(mediaPath string, fsKillChan chan struct{})	{
+func fsManager(mediaPath string, sqlFile string, fsKillChan chan struct{})	{
 	log.Println("FS MANAGER STARTED")
 
 	// Initialize filesystem watcher
@@ -32,11 +32,23 @@ func fsManager(mediaPath string, fsKillChan chan struct{})	{
 	o.Verbose(true)
 	fsTaskQueue <- o
 
+	// Queue a media scan
 	m := new(fs.MediaScan)
 	m.SetFolders(mediaPath, "")
 	m.Verbose(true)
 	fsTaskQueue <- m
 
+	// Queue a musicBrains scan
+	go func(watcherChan chan struct{}) {
+		<- watcherChan
+
+		for {
+			mb := new(fs.MusicBrainzScan)
+			mb.SetSqlFile(sqlFile)
+			mb.Scan()
+			time.Sleep(time.Hour * 24)
+		}
+	}(watcherChan)
 
 	go handleFSTasks(watcherChan)
 	go handleFSEvents(watcherChan)

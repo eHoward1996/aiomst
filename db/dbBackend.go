@@ -58,7 +58,7 @@ func (s *SqlBackend) Setup()	error {
 	}
 
 	initSchema := getSchema()
-	database, _ := sqlx.Connect("sqlite3", s.Path)
+	database, err := sqlx.Connect("sqlite3", s.Path)
 	if err != nil {
 		panic(err)
 	}
@@ -86,7 +86,7 @@ func (s *SqlBackend) Open() error	{
 	}
 
 	// Keep rollback journal in memory, instead of on disk
-	if _, err := sqlDB.Exec("PRAGMA journal_mode = MEMORY;"); err != nil {
+	if _, err := sqlDB.Exec("PRAGMA journal_mode = WAL;"); err != nil {
 		return err
 	}
 

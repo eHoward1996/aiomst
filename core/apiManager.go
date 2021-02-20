@@ -47,7 +47,8 @@ func apiManager(apikillChan chan struct{})	{
 		return
 	})
 	
-	r.GET("/", func(c *gin.Context) {c.String(http.StatusOK, "pong")})
+	// r.GET("/", func(c *gin.Context) {c.String(http.StatusOK, "pong")})
+	r.StaticFile("/", "./core/public.html")
 	r.GET("/albums",  api.GetAlbums)
 	r.GET("/artists", api.GetArtist)
 	r.GET("/songs",   api.GetSongs)

@@ -36,37 +36,69 @@ func (s *SqlBackend) albumQuery(query string, args ...interface{}) ([]Album, err
 
 // AllAlbums loads a slice of all Album structs from the database
 func (s *SqlBackend) AllAlbums() ([]Album, error) {
-	return s.albumQuery("SELECT albums.*,artists.title AS artist FROM albums " +
-		"JOIN artists ON albums.artist_id = artists.id;")
+	return s.albumQuery(
+		`SELECT 
+			albums.*,
+			artists.title AS artist 
+		FROM albums
+		JOIN artists ON albums.artist_id = artists.id;`,
+	)
 }
 
 // AllAlbumsByTitle loads a slice of all Album structs from the database ordered
 // by their title case insensitive
 func (s *SqlBackend) AllAlbumsByTitle() ([]Album, error) {
-	return s.albumQuery("SELECT albums.*,artists.title AS artist FROM albums " +
-		"JOIN artists ON albums.artist_id = artists.id ORDER BY albums.title " + 
-		"COLLATE NOCASE ASC;")
+	return s.albumQuery(
+		`SELECT 
+			albums.*,
+			artists.title AS artist 
+		FROM albums
+		JOIN artists ON albums.artist_id = artists.id
+		ORDER BY albums.title
+		COLLATE NOCASE ASC;`,
+	)
 }
 
 // LimitAlbums loads a slice of Album structs from the database using SQL limit, where the first parameter
 // specifies an offset and the second specifies an item count
 func (s *SqlBackend) LimitAlbums(offset int, count int) ([]Album, error) {
-	return s.albumQuery("SELECT albums.*,artists.title AS artist FROM albums "+
-		"JOIN artists ON albums.artist_id = artists.id LIMIT ?, ?;", offset, count)
+	return s.albumQuery(
+		`SELECT 
+			albums.*,
+			artists.title AS artist 
+		FROM albums
+		JOIN artists ON albums.artist_id = artists.id 
+		LIMIT ?, ?;`, 
+		offset, 
+		count,
+	)
 }
 
 // AlbumsForArtist loads a slice of all Album structs with matching artist ID
 func (s *SqlBackend) AlbumsForArtist(ID int) ([]Album, error) {
-	return s.albumQuery("SELECT albums.*,artists.title AS artist FROM albums "+
-		"JOIN artists ON albums.artist_id = artists.id WHERE albums.artist_id = ?;", ID)
+	return s.albumQuery(
+		`SELECT 
+			albums.*,
+			artists.title AS artist 
+		FROM albums
+		JOIN artists ON albums.artist_id = artists.id 
+		WHERE albums.artist_id = ?;`,
+		ID,
+	)
 }
 
 // SearchAlbums loads a slice of all Album structs from the database which contain
 // titles that match the specified search query
 func (s *SqlBackend) SearchAlbums(query string) ([]Album, error) {
-	return s.albumQuery("SELECT albums.*,artists.title AS artist FROM albums "+
-		"JOIN artists ON albums.artist_id = artists.id WHERE " +
-		"albums.normalized_title LIKE ?;", "%"+query+"%")
+	return s.albumQuery(
+		`SELECT 
+			albums.*,
+			artists.title AS artist 
+		FROM albums
+		JOIN artists ON albums.artist_id = artists.id 
+		WHERE albums.normalized_title LIKE ?;`, 
+		"%"+query+"%",
+	)
 }
 
 // CountAlbums fetches the total number of Album structs from the database
@@ -84,7 +116,10 @@ func (s *SqlBackend) DeleteAlbum(a *Album) error {
 	}
 
 	// Else, attempt to remove the album by its artist ID and title
-	tx.Exec("DELETE FROM albums WHERE artist_id = ? AND title = ?;", a.ArtistID, a.Title)
+	tx.Exec("DELETE FROM albums WHERE artist_id = ? AND title = ?;",
+		a.ArtistID,
+		a.Title,
+	)
 	return tx.Commit()
 }
 
@@ -94,8 +129,15 @@ func (s *SqlBackend) LoadAlbum(a *Album) (Album, error) {
 	r := *a
 	if a.ID != 0 {
 		if err := s.db.Get(
-			&r, "SELECT albums.*, artists.title AS artist FROM albums JOIN artists " +
-			"ON albums.artist_id = artists.id WHERE albums.id = ?;", a.ID);
+			&r,
+			`SELECT 
+				albums.*, 
+				artists.title AS artist 
+			FROM albums 
+			JOIN artists ON albums.artist_id = artists.id 
+			WHERE albums.id = ?;`,
+			a.ID,
+		);
 		err != nil {
 			return Album{}, err
 		}
@@ -103,9 +145,17 @@ func (s *SqlBackend) LoadAlbum(a *Album) (Album, error) {
 	}
 
 	// Load via artist ID and album title
-	if err := s.db.Get(&r, "SELECT albums.*, artists.title AS artist FROM albums " +
-		"JOIN artists ON albums.artist_id = artists.id WHERE albums.artist_id = ? " +
-		"AND albums.title = ?;", a.ArtistID, a.Title);
+	if err := s.db.Get(
+		&r,
+		`SELECT 
+			albums.*, 
+			artists.title AS artist 
+		FROM albums
+		JOIN artists ON albums.artist_id = artists.id 
+		WHERE 
+		albums.artist_id = ? AND albums.title = ?;`,
+		a.ArtistID, a.Title,
+	);
 	err != nil {
 		return Album{}, err
 	}
@@ -115,12 +165,17 @@ func (s *SqlBackend) LoadAlbum(a *Album) (Album, error) {
 // SaveAlbum attempts to save an Album to the database
 func (s *SqlBackend) SaveAlbum(a *Album) error {
 	// Insert new album
-	query := "INSERT INTO albums " +
-		"(`art_id`, `artist_id`, `folder_id`, `title`, `normalized_title`, `year`)" +
-		" VALUES (?, ?, ?, ?, ?, ?);"
+	query := `INSERT INTO albums
+		(
+			art_id, mb_id, metadata_id, 
+			artist_id, folder_id, title, 
+			normalized_title, year
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?);`
 	tx := s.db.MustBegin()
-	tx.Exec(query,
-		a.ArtID, a.ArtistID, a.FolderID, a.Title, a.NormalizedTitle, a.Year);
+	tx.MustExec(query, 
+		a.ArtID, a.MBID, a.MetadataID, a.ArtistID,
+		a.FolderID, a.Title, a.NormalizedTitle, a.Year);
 	
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
@@ -139,11 +194,32 @@ func (s *SqlBackend) SaveAlbum(a *Album) error {
 	return nil
 }
 
-// UpdateAlbumArt updates the Albums artId
-func (s *SqlBackend) UpdateAlbumArt(a *Album) error {
-	query := "UPDATE albums SET art_id = ? WHERE id = ?;"
+// UpdateAlbum updates the row in the database based where the id is the same 
+// as the passed album objects ID
+func (s *SqlBackend) UpdateAlbum(a *Album) error {
+	query := `UPDATE albums 
+		SET
+			mb_id = ?,
+			metadata_id = ?,
+			art_id = ?,
+			artist_id = ?,
+			folder_id = ?,
+			title = ?,
+			normalized_title = ?,
+			year = ?
+		WHERE id = ?;`
 	tx := s.db.MustBegin()
-	tx.Exec(query, a.ArtID, a.ID)
+	tx.Exec(
+		query,
+		a.MBID, 
+		a.MetadataID, 
+		a.ArtID, 
+		a.ArtistID, 
+		a.FolderID, 
+		a.Title, 
+		a.NormalizedTitle, 
+		a.Year,
+	)
 	return tx.Commit()
 }
 
@@ -151,8 +227,13 @@ func (s *SqlBackend) UpdateAlbumArt(a *Album) error {
 // longer have any songs which reference their ID
 func (s *SqlBackend) PurgeOrphanAlbums() (int, error) {
 	// Select all albums without a song referencing their album ID
-	rows, err := s.db.Queryx("SELECT albums.id FROM albums LEFT JOIN songs ON " +
-		"albums.id = songs.album_id WHERE songs.album_id IS NULL;")
+	rows, err := s.db.Queryx(
+		`SELECT 
+			albums.id 
+		FROM albums 
+		LEFT JOIN songs ON albums.id = songs.album_id 
+		WHERE songs.album_id IS NULL;`,
+	)
 	if err != nil && err != sql.ErrNoRows {
 		return -1, err
 	}
@@ -181,4 +262,24 @@ func (s *SqlBackend) PurgeOrphanAlbums() (int, error) {
 	}
 
 	return total, tx.Commit()
+}
+
+// GetBadAlbumMBIDs returns a list of Album objects where the rows mb_id occurs
+// more than once (aka. is non-unique) or has a value of 'errored'.
+func (s *SqlBackend) GetBadAlbumMBIDs() ([]Album, error) {
+	q := `SELECT
+		albums.*,
+		artists.title AS artist,
+		FROM albums
+		WHERE albums.mb_id
+		IN (
+			SELECT 
+				mb_id 
+				FROM albums 
+				GROUP BY mb_id 
+				HAVING COUNT(*) > 1
+		)
+		OR albums.mb_id = 'errored'
+		ORDER BY artist COLLATE NOCASE;`
+	return s.albumQuery(q)
 }

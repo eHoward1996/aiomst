@@ -10,7 +10,6 @@ import (
 	"github.com/eHoward1996/aiomst/db"
 )
 
-
 // OrphanScan is a filesystem task that scans the given path for orphaned media
 type OrphanScan struct	{
 	baseFolder 	string
@@ -76,7 +75,7 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 		// Remove all art which is not in this path
 		for _, a := range art {
 			// Remove art from database
-			filename := a.FileName
+			filename := a.Path
 			if err := a.Delete(); err != nil {
 				log.Println(err)
 				return 0, err
@@ -95,7 +94,7 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 		// Remove all songs which are not in this path
 		for _, s := range songs {
 			// Remove song from database
-			filename := s.FileName
+			filename := s.Path
 			if err := s.Delete(); err != nil {
 				log.Println(err)
 				return 0, err
@@ -145,9 +144,9 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 	// Iterate all art in this path
 	for _, a := range art {
 		// Check that the art still exists in this place
-		if _, err := os.Stat(a.FileName); os.IsNotExist(err) {
+		if _, err := os.Stat(a.Path); os.IsNotExist(err) {
 			// Remove art from database
-			filename := a.FileName
+			filename := a.Path
 			if err := a.Delete(); err != nil {
 				log.Println(err)
 				return 0, err
@@ -167,9 +166,9 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 	// Iterate all songs in this path
 	for _, s := range songs {
 		// Check that the song still exists in this place
-		if _, err := os.Stat(s.FileName); os.IsNotExist(err) {
+		if _, err := os.Stat(s.Path); os.IsNotExist(err) {
 			// Remove song from database
-			filename := s.FileName
+			filename := s.Path
 			if err := s.Delete(); err != nil {
 				log.Println(err)
 				return 0, err

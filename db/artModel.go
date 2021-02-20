@@ -9,7 +9,7 @@ import (
 type Art struct {
 	ID           int
 	FileSize		 int64 	`db:"file_size"`
-	FileName		 string `db:"file_name"` 
+	Path     		 string `db:"path"` 
 	LastModified int64  `db:"last_modified"`
 }
 
@@ -30,5 +30,5 @@ func (a *Art) Save() error {
 
 // Stream returns an art stream from the art file
 func (a Art) Stream() (io.ReadSeeker, error) {
-	return os.Open(a.FileName)
+	return os.Open(a.Path)
 }

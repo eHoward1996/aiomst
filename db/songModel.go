@@ -2,6 +2,7 @@ package db
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -68,6 +69,7 @@ var MIMEMap = map[int]string{
 // the song, and where it resides in the filsystem
 type Song struct {
 	ID              int    `json:"id"`
+	MBID						string `db:"mb_id" json:"mbId"`
 	Album           string `json:"album"`
 	AlbumID         int    `db:"album_id" json:"albumId"`
 	Artist          string `json:"artist"`
@@ -75,7 +77,7 @@ type Song struct {
 	Bitrate         int    `json:"bitrate"`
 	Channels        int    `json:"channels"`
 	Comment         string `json:"comment"`
-	FileName        string `db:"file_name" json:"fileName"`
+	Path       			string `db:"path" json:"path"`
 	FileSize        int64  `db:"file_size" json:"fileSize"`
 	FileTypeID      int    `db:"file_type_id" json:"fileTypeId"`
 	FolderID        int    `db:"folder_id" json:"folderId"`
@@ -86,6 +88,7 @@ type Song struct {
 	Title           string `json:"title"`
 	NormalizedTitle string `db:"normalized_title" json:"normalizedTitle"`   
 	Track           int    `json:"track"`
+	Disc 						string `json:"disc"`
 	Year            int    `json:"year"`
 }
 
@@ -103,15 +106,11 @@ func SongFromFile(file string) (*Song, error) {
 
 	// Retrieve some tags needed by aiomst, check for empty
 	// At minimum, we will need an artist and title to do anything useful with this file
-	title  := props["title"]
-	normalizedTitle := normalizeString(title)
-	
 	artist := props["albumartist"]
 	album  := props["album"]
-	if title == "" {
-		title = "UNKNOWN SONG TITLE"
-		errs += "No song title provided\n"
-	}
+	title  := props["title"]
+	normalizedTitle := normalizeString(title)
+
 	if artist == "" {
 		artist = "UNKNOWN ALBUM ARTIST"
 		errs += "No album artist provided\n"
@@ -119,6 +118,10 @@ func SongFromFile(file string) (*Song, error) {
 	if album == "" {
 		album = "UNKNOWN ALBUM TITLE"
 		errs += "No album title provided\n"
+	}
+	if title == "" {
+		title = "UNKNOWN SONG TITLE"
+		errs += "No song title provided\n"
 	}
 
 	// Retrieve all properties, check for empty
@@ -133,8 +136,13 @@ func SongFromFile(file string) (*Song, error) {
 		return nil, ErrSongProperties
 	}
 
+	discNum := props["discnumber"]
+	if discNum == "" {
+		discNum = "01/01"
+	}
+
 	trackNumStr := strings.Split(props["tracknumber"], "/")[0]
-	trackNum, err :=strconv.Atoi(trackNumStr)
+	trackNum, err := strconv.Atoi(trackNumStr)
 	if err != nil {
 		trackNum = 0
 		errs += "Song missing track number property\n"
@@ -145,8 +153,7 @@ func SongFromFile(file string) (*Song, error) {
 	if sYear != "" {
 		year, _ = strconv.Atoi(sYear)
 	}
-	comments := props["comment"]
-
+	
 	err = nil
 	if errs != "" {
 		err = errors.New(errs)
@@ -158,13 +165,14 @@ func SongFromFile(file string) (*Song, error) {
 		Artist:          artist,
 		Bitrate:         bitrate,
 		Channels:        channels,
-		Comment:         comments,
+		Comment:         props["comment"],
 		Genre:           props["genre"],
 		Length:          length,
 		SampleRate:      sampleRate,
 		Title:           title,
 		NormalizedTitle: normalizedTitle,
 		Track:           trackNum,
+		Disc:						 discNum,
 		Year:            year,
 	}, err
 }
@@ -192,7 +200,7 @@ func (s *Song) Update() error {
 // Stream generates a binary file stream from this Song's file location
 func (s Song) Stream() (io.ReadSeeker, error) {
 	// Attempt to open the file associated with this song
-	return os.Open(s.FileName)
+	return os.Open(s.Path)
 }
 
 // SongSlice represents a slice of songs, and provides convenience methods to access their
@@ -208,4 +216,23 @@ func (s SongSlice) Length() int {
 	}
 
 	return length
+}
+
+// ToString is a method that returns a string with simple information about this
+// object. This was mainly implemented so that db.Album counts as implementing
+// the MusicObjectInfo interface.
+func (s Song) ToString() string {
+	return fmt.Sprintf("%s - %s - %s", s.Title, s.Album, s.Artist)	
+}
+
+// GetMBID returns the Song MBID
+func (s *Song) GetMBID() string {
+	return s.MBID
+}
+
+// SetMBID sets the Song MBID in the database and returns an error if
+// necessary
+func (s *Song) SetMBID(mbid string) error {
+	s.MBID = mbid
+	return DB.UpdateSong(s)
 }
