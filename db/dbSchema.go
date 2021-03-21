@@ -17,6 +17,7 @@ CREATE UNIQUE INDEX "folders_unique_path" ON "folders" ("path");
 CREATE TABLE IF NOT EXISTS "artists" (
 	"id"    		       INTEGER PRIMARY KEY AUTOINCREMENT,
 	"mb_id"						 TEXT NOT NULL,
+	"discogs_id"			 TEXT NOT NULL,
 	"metadata_id"      INTEGER,
 	"art_id" 		       INTEGER NOT NULL,
 	"folder_id"        INTEGER NOT NULL,
@@ -29,6 +30,7 @@ CREATE UNIQUE INDEX "artists_unique_title" ON "artists" ("title");
 CREATE TABLE IF NOT EXISTS "albums" (
 	"id"               INTEGER PRIMARY KEY AUTOINCREMENT,
 	"mb_id"						 TEXT NOT NULL,
+	"discogs_id"			 TEXT NOT NULL,
 	"metadata_id"      INTEGER,
 	"art_id"		       INTEGER NOT NULL,
 	"artist_id"        INTEGER NOT NULL,

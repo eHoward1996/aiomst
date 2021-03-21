@@ -50,8 +50,7 @@ func handleSongID(sID string, c *gin.Context)	{
 	}
 
 	song := db.Song{ID: id}
-	s, err := song.Load()
-	if err != nil {
+	if err := song.Load(); err != nil {
 		if err == sql.ErrNoRows {
 			c.IndentedJSON(404, "Song ID not found.")
 			return
@@ -63,7 +62,7 @@ func handleSongID(sID string, c *gin.Context)	{
 	}
 
 	resp := new(SongsResponse)
-	resp.Songs = []db.Song{s}
+	resp.Songs = []db.Song{song}
 	c.IndentedJSON(200, resp)
 	return
 }

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/eHoward1996/aiomst/util"
 	"github.com/eHoward1996/audiotags"
 )
 
@@ -109,7 +110,7 @@ func SongFromFile(file string) (*Song, error) {
 	artist := props["albumartist"]
 	album  := props["album"]
 	title  := props["title"]
-	normalizedTitle := normalizeString(title)
+	normalizedTitle := util.NormalizeString(title)
 
 	if artist == "" {
 		artist = "UNKNOWN ALBUM ARTIST"
@@ -144,7 +145,7 @@ func SongFromFile(file string) (*Song, error) {
 	trackNumStr := strings.Split(props["tracknumber"], "/")[0]
 	trackNum, err := strconv.Atoi(trackNumStr)
 	if err != nil {
-		trackNum = 0
+		trackNum = 1
 		errs += "Song missing track number property\n"
 	}
 
@@ -183,7 +184,7 @@ func (s *Song) Delete() error {
 }
 
 // Load pulls an existing Song from the database
-func (s *Song) Load() (Song, error) {
+func (s *Song) Load() error {
 	return DB.LoadSong(s)
 }
 
@@ -218,21 +219,8 @@ func (s SongSlice) Length() int {
 	return length
 }
 
-// ToString is a method that returns a string with simple information about this
-// object. This was mainly implemented so that db.Album counts as implementing
-// the MusicObjectInfo interface.
-func (s Song) ToString() string {
-	return fmt.Sprintf("%s - %s - %s", s.Title, s.Album, s.Artist)	
-}
-
-// GetMBID returns the Song MBID
-func (s *Song) GetMBID() string {
-	return s.MBID
-}
-
-// SetMBID sets the Song MBID in the database and returns an error if
-// necessary
-func (s *Song) SetMBID(mbid string) error {
-	s.MBID = mbid
-	return DB.UpdateSong(s)
+// String is a method that returns a string with simple information about this
+// object.
+func (s Song) String() string {
+	return fmt.Sprintf("%d - %s - %s - %s", s.Track, s.Title, s.Album, s.Artist)	
 }

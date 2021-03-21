@@ -1,8 +1,13 @@
 package util
 
 import (
+	"log"
 	"strings"
 	"time"
+	"unicode"
+
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 )
 
 // ExpandHomeDir replaces input tilde characters with the absolute path to the current
@@ -15,4 +20,20 @@ func ExpandHomeDir(path string) string {
 // using the GMT time zone. This function is used to output Last-Modified headers via HTTP.
 func UNIXtoRFC1123(unix int64) string {
 	return strings.Replace(time.Unix(unix, 0).UTC().Format(time.RFC1123), "UTC", "GMT", 1)
+}
+
+// NormalizeString removes accent marks from strings.
+func NormalizeString(s string) string 	{
+	isMn := func(r rune) bool {
+		return unicode.Is(unicode.Mn, r) // Mn: nonspacing marks
+	}
+
+	t := transform.Chain(norm.NFD, transform.RemoveFunc(isMn), norm.NFC)
+	result, _, err := transform.String(t, s)
+	if err != nil {
+		log.Printf("DB: Normalize String: %s with value %s", err, s)
+		return s
+	}
+
+	return result
 }

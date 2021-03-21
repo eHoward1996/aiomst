@@ -38,17 +38,16 @@ func fsManager(mediaPath string, sqlFile string, fsKillChan chan struct{})	{
 	m.Verbose(true)
 	fsTaskQueue <- m
 
-	// Queue a musicBrains scan
-	go func(watcherChan chan struct{}) {
-		<- watcherChan
+	// // Queue a musicBrains scan
+	// go func(watcherChan chan struct{}) {
+	// 	<- watcherChan
 
-		for {
-			mb := new(fs.MusicBrainzScan)
-			mb.SetSqlFile(sqlFile)
-			mb.Scan()
-			time.Sleep(time.Hour * 24)
-		}
-	}(watcherChan)
+	// 	for {
+	// 		mb := new(fs.MusicBrainzScan)
+	// 		mb.Scan()
+	// 		time.Sleep(time.Hour * 24)
+	// 	}
+	// }(watcherChan)
 
 	go handleFSTasks(watcherChan)
 	go handleFSEvents(watcherChan)

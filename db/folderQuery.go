@@ -63,7 +63,8 @@ func (s *SqlBackend) FoldersNotInPath(path string) ([]Folder, error) {
 // SearchFolders loads a slice of all Folder structs from the database which contain
 // titles that match the specified search query
 func (s *SqlBackend) SearchFolders(query string) ([]Folder, error) {
-	return s.folderQuery("SELECT * FROM folders WHERE title LIKE ?;", "%"+query+"%")
+	return s.folderQuery(
+		"SELECT * FROM folders WHERE title LIKE ?;", "%"+query+"%")
 }
 
 // CountFolders fetches the total number of Folder structs from the database
@@ -86,29 +87,28 @@ func (s *SqlBackend) DeleteFolder(f *Folder) error {
 }
 
 // LoadFolder loads a Folder from the database, populating the parameter struct
-func (s *SqlBackend) LoadFolder(f *Folder) (Folder, error) {
+func (s *SqlBackend) LoadFolder(f *Folder) error {
 	// Load the folder via ID if available
-	r := *f
 	if f.ID != 0 {
-		if err := s.db.Get(&r, "SELECT * FROM folders WHERE id = ?;", f.ID);
+		if err := s.db.Get(f, "SELECT * FROM folders WHERE id = ?;", f.ID);
 		err != nil {
-			return Folder{}, err
+			return err
 		}
-		return r, nil
+		return nil
 	}
 
 	// Load via path
-	if err := s.db.Get(&r, "SELECT * FROM folders WHERE path = ?;", f.Path);
+	if err := s.db.Get(f, "SELECT * FROM folders WHERE path = ?;", f.Path);
 	err != nil {
-		return Folder{}, err
+		return err
 	}
-	return r, nil
+	return nil
 }
 
 // SaveFolder attempts to save an Folder to the database
 func (s *SqlBackend) SaveFolder(f *Folder) error {
 	// Insert new folder
-	query := "INSERT INTO folders (`parent_id`, `title`, `path`) VALUES (?, ?, ?);"
+	query := "INSERT INTO folders (parent_id, title, path) VALUES (?, ?, ?);"
 	tx := s.db.MustBegin()
 	tx.Exec(query, f.ParentID, f.Title, f.Path)
 
@@ -119,11 +119,9 @@ func (s *SqlBackend) SaveFolder(f *Folder) error {
 
 	// If no ID, reload to grab it
 	if f.ID == 0 {
-		folder, err := s.LoadFolder(f);
-		if err != nil {
+		if err := s.LoadFolder(f); err != nil {
 			return err
 		}
-		*f = folder
 	}
 	return nil
 }

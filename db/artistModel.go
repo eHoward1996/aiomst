@@ -2,12 +2,15 @@ package db
 
 import (
 	"fmt"
+
+	"github.com/eHoward1996/aiomst/util"
 )
 
 // Artist represents an artist in the db and contains a unique ID and name
 type Artist struct {
 	ID    		      int    	`json:"id"`
 	MBID						string  `db:"mb_id" json:"mbId"`
+	DiscogsID       string  `db:"discogs_id" json:"discogsId"`
 	MetadataID      int     `db:"metadata_id" json:"metadataId"`
 	ArtID  		      int 		`db:"art_id" json:"artId"` 
 	FolderID 	      int 		`db:"folder_id" json:"folderId"`
@@ -21,7 +24,7 @@ func GetArtistFromSong(song *Song) *Artist {
 	// Copy the artist name to 
 	return &Artist{
 		Title:           song.Artist,
-		NormalizedTitle: normalizeString(song.Artist),
+		NormalizedTitle: util.NormalizeString(song.Artist),
 	}
 }
 
@@ -29,35 +32,23 @@ func GetArtistFromSong(song *Song) *Artist {
 func (a *Artist) GetArt() (*Art, error) {
 	art := new(Art)
 	art.ID = a.ArtID
-	artObj, err := art.Load()
-	if err != nil {
+	if err := art.Load(); err != nil {
 		return nil, err
 	}
-	return &artObj, nil
+	return art, nil
 }
 
-// SetArtID sets the ArtID for the struct
-func (a *Artist) SetArtID(aID int) error {
-	a.ArtID = aID
-	return DB.UpdateArtistArt(a)
-}
-
-// GetMetadata returns a Metadata object based on the MetadataID from this struct
-func (a *Artist) GetMetadata() (*Metadata, error) {
+// GetMetadataObj returns a Metadata object based on the MetadataID from this
+// struct
+func (a *Artist) GetMetadataObj() (*Metadata, error) {
 	md := new(Metadata)
 	md.ID = a.MetadataID
-	mdObj, err := md.Load()
-	if err != nil {
+	if err := md.Load(); err != nil {
 		return nil, err
 	}
-	return &mdObj, nil
+	return md, nil
 }
 
-// SetMetadataID sets the MetadataID for the struct
-func (a *Artist) SetMetadataID(mID int) error {
-	a.MetadataID = mID
-	return DB.UpdateArtistMetadata(a)
-}
 
 // Delete removes an existing Artist from the database
 func (a *Artist) Delete() error {
@@ -65,7 +56,7 @@ func (a *Artist) Delete() error {
 }
 
 // Load pulls an existing Artist from the database
-func (a *Artist) Load() (Artist, error) {
+func (a *Artist) Load() error {
 	return DB.LoadArtist(a)
 }
 
@@ -74,8 +65,18 @@ func (a *Artist) Save() error {
 	return DB.SaveArtist(a)
 }
 
-// ToString is a method that returns a string with simple information about this
+// Update saves an existing Artist in the database
+func (a *Artist) Update() error {
+	return DB.UpdateArtist(a)
+}
+
+// HasAttachables denotes this object has "attachable" or associated objects.
+// Objects that can be attached have an "IsAttachable" method.
+// TODO: Find a better way to make loose object associations
+func (a *Artist) HasAttachables() {}
+
+// String is a method that returns a string with simple information about this
 // object.
-func (a Artist) ToString() string {
+func (a Artist) String() string {
 	return fmt.Sprintf("%s", a.Title)	
 }

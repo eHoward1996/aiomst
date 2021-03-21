@@ -2,6 +2,7 @@ package db
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 )
 
@@ -20,7 +21,7 @@ func (m *Metadata) Save() error {
 }
 
 // Load pulls existing metadata from the db
-func (m *Metadata) Load() (Metadata, error) {
+func (m *Metadata) Load() error {
 	return DB.LoadMetadata(m)
 }
 
@@ -30,16 +31,23 @@ func (m *Metadata) Delete() error {
 }
 
 // ReadMetadata returns a map with the data found in the metadata file
-func (m *Metadata) ReadMetadata() (map[string]interface{}, error) {
-	b, err := ioutil.ReadFile(m.Path)
-	if err != nil {
-		return nil, err
-	}
-
-	var j map[string]interface{}
-	if err := json.Unmarshal(b, &j); err != nil {
-		return nil, err
-	}
-
-	return j, nil
+func (m *Metadata) ReadMetadata() ([]byte, error) {
+	return ioutil.ReadFile(m.Path)	
 } 
+
+
+func (m *Metadata) ToStruct(t interface{}) error {
+	mdBytes, e := m.ReadMetadata()
+	if e != nil {
+		return e
+	}
+
+	switch t.(type) {
+	case *ArtistMetadata:
+		return json.Unmarshal(mdBytes, t)
+	case *AlbumMetadata:
+		return json.Unmarshal(mdBytes, t)
+	default:
+		return fmt.Errorf("Unknown Object: %T", t)
+	}	
+}

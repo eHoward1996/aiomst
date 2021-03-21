@@ -66,23 +66,22 @@ func (s *SqlBackend) DeleteArt(a *Art) error {
 }
 
 // LoadArt loads Art from the database, populating the parameter struct
-func (s *SqlBackend) LoadArt(a *Art) (Art, error) {
+func (s *SqlBackend) LoadArt(a *Art) error {
 	// Load the artist via ID if available
-	r := *a
 	if a.ID != 0 {
-		if err := s.db.Get(&r, "SELECT * FROM art WHERE id = ?;", a.ID);
+		if err := s.db.Get(a, "SELECT * FROM art WHERE id = ?;", a.ID);
 		err != nil {
-			return Art{}, err
+			return err
 		}
-		return r, nil
+		return nil
 	}
 
 	// Load via file name
-	if err := s.db.Get(&r, "SELECT * FROM art WHERE path = ?;", a.Path);
+	if err := s.db.Get(a, "SELECT * FROM art WHERE path = ?;", a.Path);
 	err != nil {
-		return Art{}, err
+		return err
 	}
-	return r, nil
+	return nil
 }
 
 // SaveArt attempts to save Art to the database
@@ -100,11 +99,9 @@ func (s *SqlBackend) SaveArt(a *Art) error {
 
 	// If no ID, reload to grab it
 	if a.ID == 0 {
-		art, err := s.LoadArt(a)
-		if err != nil {
+		if err := s.LoadArt(a); err != nil {
 			return err
 		}
-		*a = art
 	}
 	return nil
 }

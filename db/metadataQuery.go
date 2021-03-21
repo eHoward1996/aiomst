@@ -35,23 +35,22 @@ func (s *SqlBackend) metadataQuery(query string, args ...interface{}) ([]Metadat
 }
 
 // LoadMetadata loads Metadata from the database, populating the parameter struct
-func (s *SqlBackend) LoadMetadata(m *Metadata) (Metadata, error) {
+func (s *SqlBackend) LoadMetadata(m *Metadata) error {
 	// Load metadata via ID if available
-	r := *m
 	if m.ID != 0 {
-		if err := s.db.Get(&r, "SELECT * FROM metadata WHERE id = ?;", m.ID); 
+		if err := s.db.Get(m, "SELECT * FROM metadata WHERE id = ?;", m.ID); 
 		err != nil {
-			return Metadata{}, err	
+			return err	
 		}
-		return r, nil
+		return nil
 	}
 
 	// Load via Path
-	if err := s.db.Get(&r, "SELECT * FROM metadata WHERE path = ?;", m.Path);
+	if err := s.db.Get(m, "SELECT * FROM metadata WHERE path = ?;", m.Path);
 	err != nil {
-		return Metadata{}, err
+		return err
 	}
-	return r, nil
+	return nil
 }
 
 
@@ -70,11 +69,9 @@ func (s *SqlBackend) SaveMetadata(m *Metadata) error {
 
 	// If no ID, reload to grab it
 	if m.ID == 0 {
-		meta, err := s.LoadMetadata(m)
-		if err != nil {
+		if err := s.LoadMetadata(m); err != nil {
 			return err
 		}
-		*m = meta
 	}
 	return nil
 }

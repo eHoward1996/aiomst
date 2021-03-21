@@ -38,15 +38,14 @@ func handleAlbumID(sID string, c *gin.Context)	{
 	}
 
 	album := db.Album{ID: id}
-	a, err := album.Load()
-	if err != nil {
+	if err := album.Load(); err != nil {
 		log.Print(err)
 		c.JSON(500, ErrGeneric)
 		return
 	}
 
 	resp := new(AlbumResponse)
-	resp.Albums = []db.Album{a}
+	resp.Albums = []db.Album{album}
 
 	songs, err := db.DB.SongsForAlbum(album.ID)
 	if err != nil {

@@ -43,7 +43,7 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 	// Halt scan if needed
 	var mutex sync.RWMutex
 	haltWalk := false
-	go func() {
+	go func(haltWalk bool) {
 		// Wait for signal
 		<- orphanCancelChan
 
@@ -51,7 +51,7 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 		mutex.Lock()
 		haltWalk = true
 		mutex.Unlock()
-	}()
+	}(haltWalk)
 
 	// Track metrics about the scan
 	artCount := 0

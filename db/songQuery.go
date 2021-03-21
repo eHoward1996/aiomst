@@ -207,12 +207,11 @@ func (s *SqlBackend) DeleteSong(a *Song) error {
 }
 
 // LoadSong loads a Song from the database, populating the parameter struct
-func (s *SqlBackend) LoadSong(a *Song) (Song, error) {
+func (s *SqlBackend) LoadSong(a *Song) error {
 	// Load the song via ID if available
-	r := *a
 	if a.ID != 0 {
 		if err := s.db.Get(
-			&r, 
+			a, 
 			`SELECT 
 				songs.*, 
 				artists.title AS artist, 
@@ -224,14 +223,14 @@ func (s *SqlBackend) LoadSong(a *Song) (Song, error) {
 			a.ID,
 		);
 		err != nil {
-			return Song{}, err
+			return err
 		}
-		return r, nil
+		return nil
 	}
 
 	// Load via file name
 	if err := s.db.Get(
-		&r,
+		a,
 		`SELECT 
 			songs.*, 
 			artists.title AS artist, 
@@ -242,9 +241,9 @@ func (s *SqlBackend) LoadSong(a *Song) (Song, error) {
 		WHERE songs.path = ?;`, 
 		a.Path,
 	); err != nil {
-		return Song{}, err
+		return err
 	}
-	return r, nil
+	return nil
 }
 
 // SaveSong attempts to save a Song to the database
@@ -284,11 +283,9 @@ func (s *SqlBackend) SaveSong(a *Song) error {
 
 	// If no ID, reload to grab it
 	if a.ID == 0 {
-		song, err := s.LoadSong(a)
-		if err != nil {
+		if err := s.LoadSong(a); err != nil {
 			return err
 		}
-		*a = song 
 	}
 	return nil
 }

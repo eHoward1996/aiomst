@@ -25,8 +25,7 @@ func GetStream(c *gin.Context) {
 	}
 
 	song := &db.Song{ID: id}
-	s, err := song.Load()
-	if err != nil {
+	if err := song.Load(); err != nil {
 		// Check for invalid ID
 		if err == sql.ErrNoRows {
 			c.JSON(404, "song ID not found")
@@ -39,7 +38,7 @@ func GetStream(c *gin.Context) {
 		return
 	}
 
-	stream, err := s.Stream()
+	stream, err := song.Stream()
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, serverErr)

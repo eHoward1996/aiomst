@@ -89,7 +89,6 @@ func (s *SqlBackend) Open() error	{
 	if _, err := sqlDB.Exec("PRAGMA journal_mode = WAL;"); err != nil {
 		return err
 	}
-
 	s.db = sqlDB
 	return nil
 }
@@ -97,4 +96,12 @@ func (s *SqlBackend) Open() error	{
 // Close closes the sqlite sqlx database connection
 func (s *SqlBackend) Close() error	{
 	return s.db.Close()
+}
+
+// TruncateLog truncates the WAL file to 0 bytes.
+func (s *SqlBackend) TruncateLog() error {
+	if _, err := s.db.Exec("PRAGMA wal_checkpoint(TRUNCATE);"); err != nil {
+		return err
+	}
+	return nil
 }

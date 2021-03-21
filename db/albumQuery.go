@@ -124,12 +124,11 @@ func (s *SqlBackend) DeleteAlbum(a *Album) error {
 }
 
 // LoadAlbum loads an Album from the database, populating the parameter struct
-func (s *SqlBackend) LoadAlbum(a *Album) (Album, error) {
+func (s *SqlBackend) LoadAlbum(a *Album) error {
 	// Load the album via ID if available
-	r := *a
 	if a.ID != 0 {
 		if err := s.db.Get(
-			&r,
+			a,
 			`SELECT 
 				albums.*, 
 				artists.title AS artist 
@@ -139,14 +138,14 @@ func (s *SqlBackend) LoadAlbum(a *Album) (Album, error) {
 			a.ID,
 		);
 		err != nil {
-			return Album{}, err
+			return err
 		}
-		return r, nil
+		return nil
 	}
 
 	// Load via artist ID and album title
 	if err := s.db.Get(
-		&r,
+		a,
 		`SELECT 
 			albums.*, 
 			artists.title AS artist 
@@ -157,9 +156,9 @@ func (s *SqlBackend) LoadAlbum(a *Album) (Album, error) {
 		a.ArtistID, a.Title,
 	);
 	err != nil {
-		return Album{}, err
+		return err
 	}
-	return r, nil
+	return nil
 }
 
 // SaveAlbum attempts to save an Album to the database
@@ -167,15 +166,16 @@ func (s *SqlBackend) SaveAlbum(a *Album) error {
 	// Insert new album
 	query := `INSERT INTO albums
 		(
-			art_id, mb_id, metadata_id, 
-			artist_id, folder_id, title, 
-			normalized_title, year
+			art_id, mb_id, discogs_id,
+			metadata_id, artist_id, folder_id,
+			title, normalized_title, year
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?);`
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	tx := s.db.MustBegin()
 	tx.MustExec(query, 
-		a.ArtID, a.MBID, a.MetadataID, a.ArtistID,
-		a.FolderID, a.Title, a.NormalizedTitle, a.Year);
+		a.ArtID, a.MBID, a.DiscogsID, 
+		a.MetadataID, a.ArtistID,	a.FolderID, 
+		a.Title, a.NormalizedTitle, a.Year);
 	
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
@@ -184,13 +184,10 @@ func (s *SqlBackend) SaveAlbum(a *Album) error {
 
 	// If no ID, reload to grab it
 	if a.ID == 0 {
-		album, err := s.LoadAlbum(a)
-		if err != nil {
+		if err := s.LoadAlbum(a); err != nil {
 			return err
 		}
-		*a = album
 	}
-
 	return nil
 }
 
@@ -200,6 +197,7 @@ func (s *SqlBackend) UpdateAlbum(a *Album) error {
 	query := `UPDATE albums 
 		SET
 			mb_id = ?,
+			discogs_id = ?,
 			metadata_id = ?,
 			art_id = ?,
 			artist_id = ?,
@@ -212,6 +210,7 @@ func (s *SqlBackend) UpdateAlbum(a *Album) error {
 	tx.Exec(
 		query,
 		a.MBID, 
+		a.DiscogsID,
 		a.MetadataID, 
 		a.ArtID, 
 		a.ArtistID, 
@@ -219,6 +218,7 @@ func (s *SqlBackend) UpdateAlbum(a *Album) error {
 		a.Title, 
 		a.NormalizedTitle, 
 		a.Year,
+		a.ID,
 	)
 	return tx.Commit()
 }
@@ -262,24 +262,4 @@ func (s *SqlBackend) PurgeOrphanAlbums() (int, error) {
 	}
 
 	return total, tx.Commit()
-}
-
-// GetBadAlbumMBIDs returns a list of Album objects where the rows mb_id occurs
-// more than once (aka. is non-unique) or has a value of 'errored'.
-func (s *SqlBackend) GetBadAlbumMBIDs() ([]Album, error) {
-	q := `SELECT
-		albums.*,
-		artists.title AS artist,
-		FROM albums
-		WHERE albums.mb_id
-		IN (
-			SELECT 
-				mb_id 
-				FROM albums 
-				GROUP BY mb_id 
-				HAVING COUNT(*) > 1
-		)
-		OR albums.mb_id = 'errored'
-		ORDER BY artist COLLATE NOCASE;`
-	return s.albumQuery(q)
 }

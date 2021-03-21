@@ -1,6 +1,5 @@
 package db
 
-
 // Folder represents a filesystem folder
 type Folder struct	{
 	ID       int    `json:"id"`
@@ -20,7 +19,7 @@ func (f *Folder) Delete()	error {
 }
 
 // Load pulls an existing folder from the db
-func (f *Folder) Load() (Folder, error) {
+func (f *Folder) Load() error {
 	return DB.LoadFolder(f)
 }
 

@@ -1,13 +1,7 @@
 package fs
 
-import "github.com/eHoward1996/aiomst/db"
-
 // Constant MBID Values
-const errMBIDStartValue       = "errored"
-const errNoClient             = "400:Client Not Available"
-const errNoInfo               = "500:Info Not Available"
-const errUnexpectedTermLength = "600:Unexpected Number of Terms"
-const errConfidenceTooLow     = "200:Confidence Scores Too Low"
+const errStartValue = "errored"
 
 // The name of the default metadata file
 const metadataFile = "metadata"
@@ -31,18 +25,11 @@ var audioType = map[string]bool {
 	".wv"  : true,
 }
 
-// AttachesArt is either a db.Album or db.Artist. Both implement methods
-// to get an Art object by ID and set the objects ArtId. 
-type AttachesArt interface {
-	GetArt()	(*db.Art, error)
-	SetArtID(int) error
-}
-
-// HasMetadata is either a db.Album or db.Artist. Both implement methods to get 
-// and set Metadata (by ID).
-type HasMetadata interface {
-	GetMetadata() (*db.Metadata, error)
-	SetMetadataID(int) error
+// HasAttachables is any type that implements the HasAttachables method. 
+// Right now, that's just Artists and Albums.
+// TODO: Find a better way to do this.
+type HasAttachables interface {
+	HasAttachables()
 }
 
 // Task is an interface that defines a filesystem task

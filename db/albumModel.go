@@ -2,12 +2,15 @@ package db
 
 import (
 	"fmt"
+
+	"github.com/eHoward1996/aiomst/util"
 )
 
 // Album represents an album and contains information extracted from song tags
 type Album struct {
 	ID       	      int    	`json:"id"`
 	MBID						string  `db:"mb_id" json:"mbId"`
+	DiscogsID       string  `db:"discogs_id" json:"discogsId"`
 	MetadataID      int     `db:"metadata_id" json:"metadataId"`
 	ArtID 		      int 		`db:"art_id" json:"artId"`
 	Artist   	      string 	`json:"artist"`
@@ -24,7 +27,7 @@ func GetAlbumFromSong(song *Song) *Album {
 	return &Album{
 		Artist:          song.Artist,
 		Title:           song.Album,
-		NormalizedTitle: normalizeString(song.Album),
+		NormalizedTitle: util.NormalizeString(song.Album),
 		Year:            song.Year,
 	}
 }
@@ -33,22 +36,21 @@ func GetAlbumFromSong(song *Song) *Album {
 func (a *Album) GetArt() (*Art, error)	{
 	art := new(Art)
 	art.ID = a.ArtID
-	artObj, err := art.Load()
-	if err != nil {
+	if err := art.Load(); err != nil {
 		return nil, err
 	}
-	return &artObj, nil
+	return art, nil
 }
 
-// GetMetadata returns a Metadata object based on the MetadataID from this struct
-func (a *Album) GetMetadata() (*Metadata, error) {
+// GetMetadataObj returns a Metadata object based on the MetadataID from this
+// struct
+func (a *Album) GetMetadataObj() (*Metadata, error) {
 	md := new(Metadata)
 	md.ID = a.MetadataID
-	mdObj, err := md.Load()
-	if err != nil {
+	if err := md.Load(); err != nil {
 		return nil, err
 	}
-	return &mdObj, nil
+	return md, nil
 }
 
 // Delete removes an existing Album from the database
@@ -57,7 +59,7 @@ func (a *Album) Delete() error {
 }
 
 // Load pulls an existing Album from the database
-func (a *Album) Load() (Album, error) {
+func (a *Album) Load() error {
 	return DB.LoadAlbum(a)
 }
 
@@ -66,8 +68,18 @@ func (a *Album) Save() error {
 	return DB.SaveAlbum(a)
 }
 
-// ToString is a method that returns a string with simple information about this
+// Update saves an existing Album in the database
+func (a *Album) Update() error {
+	return DB.UpdateAlbum(a)
+}
+
+// HasAttachables denotes this object has "attachable" or associated objects.
+// Objects that can be attached have an "IsAttachable" method.
+// TODO: Find a better way to make loose object associations
+func (a *Album) HasAttachables() {}
+
+// String is a method that returns a string with simple information about this
 // object. 
-func (a Album) ToString() string {
+func (a Album) String() string {
 	return fmt.Sprintf("%s - %s", a.Title, a.Artist)	
 }
