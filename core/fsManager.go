@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/eHoward1996/aiomst/fs"
+	"github.com/eHoward1996/aiomst/fs/integrated"
 	"github.com/eHoward1996/aiomst/util"
 
 	"github.com/radovskyb/watcher"
@@ -38,16 +39,16 @@ func fsManager(mediaPath string, sqlFile string, fsKillChan chan struct{})	{
 	m.Verbose(true)
 	fsTaskQueue <- m
 
-	// // Queue a musicBrains scan
-	// go func(watcherChan chan struct{}) {
-	// 	<- watcherChan
+	// // Queue a job to integrate third party data
+	go func(watcherChan chan struct{}) {
+		<- watcherChan
 
-	// 	for {
-	// 		mb := new(fs.MusicBrainzScan)
-	// 		mb.Scan()
-	// 		time.Sleep(time.Hour * 24)
-	// 	}
-	// }(watcherChan)
+		for {
+			tpi := new(integrated.TPIntegrator)
+			tpi.Integrate()
+			time.Sleep(time.Hour * 24)
+		}
+	}(watcherChan)
 
 	go handleFSTasks(watcherChan)
 	go handleFSEvents(watcherChan)

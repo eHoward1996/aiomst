@@ -263,3 +263,32 @@ func (s *SqlBackend) PurgeOrphanAlbums() (int, error) {
 
 	return total, tx.Commit()
 }
+
+// AlbumsWithErroredThirdPartyId returns a list of Albums where any id used by 
+// a third party is "errored" or non-unique.
+// Currently, the only Third Party APIs being used are
+//     1. MusicBrainz (MusicBrainzID or MBID)
+//     2. Discogs (DiscogsID)
+func (s *SqlBackend) AlbumsWithErroredThirdPartyId() ([]Album, error) {
+	return s.albumQuery(
+		`SELECT
+			albums.*, 
+			artists.title AS artist
+		FROM albums 
+		JOIN artists 
+		ON artists.id = albums.artist_id 
+		WHERE albums.mb_id = "errored" 
+		OR albums.mb_id IN (
+			SELECT albums.mb_id 
+			FROM albums 
+			GROUP BY albums.mb_id 
+			HAVING COUNT (*) > 1
+		)
+		OR albums.discogs_id = "errored"
+		OR albums.discogs_id IN (
+			SELECT albums.discogs_id
+			FROM albums
+			GROUP BY albums.discogs_id
+			HAVING COUNT (*) > 1
+		);`)
+}

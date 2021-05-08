@@ -10,7 +10,7 @@ import (
 type Artist struct {
 	ID    		      int    	`json:"id"`
 	MBID						string  `db:"mb_id" json:"mbId"`
-	DiscogsID       string  `db:"discogs_id" json:"discogsId"`
+	DiscogsID       int     `db:"discogs_id" json:"discogsId"`
 	MetadataID      int     `db:"metadata_id" json:"metadataId"`
 	ArtID  		      int 		`db:"art_id" json:"artId"` 
 	FolderID 	      int 		`db:"folder_id" json:"folderId"`

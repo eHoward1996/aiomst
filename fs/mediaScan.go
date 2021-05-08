@@ -128,7 +128,7 @@ func (fs *MediaScan) Scan(
 				}
 				
 				if _, ok := imgType[ext]; ok {
-					art, err := handleImg(osPathname, info)
+					art, err := handleImg(osPathname, folder)
 					if err != nil {
 						return fmt.Errorf("FS: Media Scan: Error handling image: %s", err)
 					}
@@ -165,50 +165,8 @@ func (fs *MediaScan) Scan(
 			},
 			Unsorted: true,
 		})
-
-		for k, v := range fIDHasAttachables {
-			if _, ok := folderAttachables[k]; !ok {
-				log.Printf("FS: Media Scan: No attachables for Folder ID: %v", k)
-				continue
-			}
-			
-			switch v.(type) {
-			case *db.Artist, *db.Album:
-				a := folderAttachables[k]
-				if x, ok := v.(*db.Album); ok {
-					c := &a
-					if c.md != nil {
-						x.MetadataID = c.md.ID
-					}
-					if c.art != nil {
-						x.ArtID = c.art.ID
-					}
-					
-					album := *x
-					if err := album.Update(); err != nil {
-						log.Printf("FS: Media Scan: Error updating %T: %v", x, err)
-					}
-				} else if x, ok := v.(*db.Artist); ok {
-					c := &a
-					if c.md != nil {
-						x.MetadataID = c.md.ID
-					}
-					if c.art != nil {
-						x.ArtID = c.art.ID
-					}
-
-					artist := *x
-					if err := artist.Update(); err != nil {
-						log.Printf("FS: Media Scan: Error updating %T: %v", x, err)
-					}
-				}
-			default:
-				log.Printf(
-					"FS: Media Scan: Unable to attach objects to unknown Type: %T", v)
-				continue
-			}
-		}
 		
+		joinAttachables()
 		if err := db.DB.TruncateLog(); err != nil {
 			log.Printf("FS: Media Scan: Could not truncate WAL File: %v", err)
 		}
@@ -296,7 +254,7 @@ func handleFolder(cPath string, info os.FileMode)	(*db.Folder, error) {
 	return folder, nil
 }
 
-func handleImg(cPath string, info os.FileMode) (*db.Art, error) {
+func handleImg(cPath string, folder *db.Folder) (*db.Art, error) {
 	art := new(db.Art)
 	art.Path = cPath
 
@@ -311,6 +269,7 @@ func handleImg(cPath string, info os.FileMode) (*db.Art, error) {
 			return nil, err
 		}
 
+		art.FolderID = folder.ID
 		art.FileSize = data.Size()
 		art.LastModified = data.ModTime().Unix()
 		if art.FileSize == 0 {
@@ -416,7 +375,7 @@ func handleArtist(song *db.Song) (*db.Artist, error) {
 			artist.FolderID = f.ParentID
 		}
 		artist.MBID = errStartValue
-		artist.DiscogsID = errStartValue
+		artist.DiscogsID = -1
 		artist.MetadataID = 0
 		if err := artist.Save(); err != nil {
 			return nil, fmt.Errorf(
@@ -450,7 +409,7 @@ func handleAlbum(song *db.Song) (*db.Album, error) {
 		album.ArtistID = song.ArtistID
 		album.FolderID = song.FolderID
 		album.MBID = errStartValue
-		album.DiscogsID = errStartValue
+		album.DiscogsID = -1
 		album.MetadataID = 0
 		if err := album.Save(); err != nil {
 			return nil, fmt.Errorf(
@@ -502,4 +461,48 @@ func checkForModification(origin *db.Song) error	{
 		}
 	}	
 	return fmt.Errorf("FS: Media Scan: Check Modification Other Error: %v", err)
+}
+
+func joinAttachables() {
+	for k, v := range fIDHasAttachables {
+		if _, ok := folderAttachables[k]; !ok {
+			log.Printf("FS: Media Scan: No attachables for Folder ID: %v", k)
+			continue
+		}
+
+		switch x := v.(type) {
+		case *db.Artist:
+			artist := *x
+			if folderAttachables[k].md != nil {
+				md := *folderAttachables[k].md
+				artist.MetadataID = md.ID
+			}
+			if folderAttachables[k].art != nil {
+				art := *folderAttachables[k].art
+				artist.ArtID = art.ID
+			}
+			if err := artist.Update(); err != nil {
+				log.Printf(
+					"FS: Media Scan: Error updating Artist %v: %v", artist.Title, err)
+			}
+		case *db.Album:	
+			album := *x	
+			if folderAttachables[k].md != nil {
+				md := *folderAttachables[k].md
+				album.MetadataID = md.ID
+			}
+			if folderAttachables[k].art != nil {
+				art := *folderAttachables[k].art
+				album.ArtID = art.ID
+			}
+			if err := album.Update(); err != nil {
+				log.Printf(
+					"FS: Media Scan: Error updating Album %v - %v: %v", 
+					album.Artist, album.Title, err)
+			}
+		default:
+			log.Printf(
+				"FS: Media Scan: Unable to attach objects to unknown Type: %T", v)
+		}
+	}
 }
