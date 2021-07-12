@@ -1,5 +1,11 @@
 package fs
 
+// Constant MBID Values
+const errStartValue = "errored"
+
+// The name of the default metadata file
+const metadataFile = "metadata"
+
 // imgType is a set of valid file extensions for images
 var imgType = map[string]bool	{
 	".jpg"  : true,
@@ -19,11 +25,11 @@ var audioType = map[string]bool {
 	".wv"  : true,
 }
 
-// AttachesArt is either a db.Album or db.Artist. Both implement a method
-// to update a row in the database with an ArtID. 
-type AttachesArt interface {
-	GetArtID()    int
-	SetArtID(int) error
+// HasAttachables is any type that implements the HasAttachables method. 
+// Right now, that's just Artists and Albums.
+// TODO: Find a better way to do this.
+type HasAttachables interface {
+	HasAttachables()
 }
 
 // Task is an interface that defines a filesystem task

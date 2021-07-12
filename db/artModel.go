@@ -9,8 +9,9 @@ import (
 type Art struct {
 	ID           int
 	FileSize		 int64 	`db:"file_size"`
-	FileName		 string `db:"file_name"` 
+	FolderID     int    `db:"folder_id" json:"folderId"`
 	LastModified int64  `db:"last_modified"`
+	Path     		 string `db:"path"` 
 }
 
 // Delete removes existing Art from the database
@@ -19,7 +20,7 @@ func (a *Art) Delete() error {
 }
 
 // Load pulls existing Art from the database
-func (a *Art) Load() (Art, error) {
+func (a *Art) Load() error {
 	return DB.LoadArt(a)
 }
 
@@ -30,5 +31,5 @@ func (a *Art) Save() error {
 
 // Stream returns an art stream from the art file
 func (a Art) Stream() (io.ReadSeeker, error) {
-	return os.Open(a.FileName)
+	return os.Open(a.Path)
 }

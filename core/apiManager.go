@@ -15,7 +15,7 @@ import (
 )
 
 func apiManager(apikillChan chan struct{})	{
-	log.Print("API MANAGER STARTED")
+	util.Logger.Print("API MANAGER STARTED")
 	gracefulChan := make(chan struct{}, 0)
 
 	gin.SetMode(gin.ReleaseMode)
@@ -47,7 +47,8 @@ func apiManager(apikillChan chan struct{})	{
 		return
 	})
 	
-	r.GET("/", func(c *gin.Context) {c.String(http.StatusOK, "pong")})
+	// r.GET("/", func(c *gin.Context) {c.String(http.StatusOK, "pong")})
+	r.StaticFile("/", "./core/public.html")
 	r.GET("/albums",  api.GetAlbums)
 	r.GET("/artists", api.GetArtist)
 	r.GET("/songs",   api.GetSongs)
@@ -77,7 +78,7 @@ func watchKillSig(apiKillChan chan struct{})	{
 		// Stop API
 		case <-apiKillChan:
 			// Inform manager that shutdown is complete
-			log.Println("API MANAGER STOPPED")
+			util.Logger.Print("API MANAGER STOPPED")
 			apiKillChan <- struct{}{}
 			return
 		}

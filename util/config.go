@@ -21,8 +21,8 @@ type SqliteFile struct {
 
 // Config is the programs configuration options.
 type Config struct {
-	Host 				string 		`json:"host"`
-	MediaFolder string		`json:"mediaFolder"`
+	Host 				string 		  `json:"host"`
+	MediaFolder string		  `json:"mediaFolder"`
 	Sqlite			*SqliteFile	`json:"sqlite"`
 }
 

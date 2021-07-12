@@ -1,7 +1,6 @@
 package db
 
 import (
-	"log"
 	"os"
 	"path"
 
@@ -42,7 +41,7 @@ func (s *SqlBackend) Setup()	error {
 	}
 
 	// Create a new DB file
-	log.Print("DB: Creating new DB file: ", s.Path)
+	util.Logger.Print("DB: Creating new DB file: ", s.Path)
 	dir := path.Dir(s.Path) + "/"
 	file := path.Base(s.Path)
 
@@ -58,12 +57,12 @@ func (s *SqlBackend) Setup()	error {
 	}
 
 	initSchema := getSchema()
-	database, _ := sqlx.Connect("sqlite3", s.Path)
+	database, err := sqlx.Connect("sqlite3", s.Path)
 	if err != nil {
 		panic(err)
 	}
 
-	log.Print("DB: Setup: Executing Init Schema")
+	util.Logger.Print("DB: Setup: Executing Init Schema")
 	database.MustExec(initSchema)
 
 	// Close file
@@ -86,10 +85,9 @@ func (s *SqlBackend) Open() error	{
 	}
 
 	// Keep rollback journal in memory, instead of on disk
-	if _, err := sqlDB.Exec("PRAGMA journal_mode = MEMORY;"); err != nil {
+	if _, err := sqlDB.Exec("PRAGMA journal_mode = WAL;"); err != nil {
 		return err
 	}
-
 	s.db = sqlDB
 	return nil
 }
@@ -97,4 +95,12 @@ func (s *SqlBackend) Open() error	{
 // Close closes the sqlite sqlx database connection
 func (s *SqlBackend) Close() error	{
 	return s.db.Close()
+}
+
+// TruncateLog truncates the WAL file to 0 bytes.
+func (s *SqlBackend) TruncateLog() error {
+	if _, err := s.db.Exec("PRAGMA wal_checkpoint(TRUNCATE);"); err != nil {
+		return err
+	}
+	return nil
 }

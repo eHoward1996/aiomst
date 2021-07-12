@@ -4,29 +4,17 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/eHoward1996/aiomst/db"
+	"github.com/eHoward1996/aiomst/util"
 
 	"github.com/karrick/godirwalk"
 )
-
-// Cache repetitive entries
-var folderCache = map[string]*db.Folder{}
-var artistCache = map[string]*db.Artist{}
-var albumCache  = map[string]*db.Album{}
-
-// Track folder IDs containing new art and hold the art IDs.
-var artFiles map[int]int
-
-// Map folder IDs to db.Artist or db.Album
-var attachArt map[int]AttachesArt = make(map[int]AttachesArt)
 
 // MediaScan is a filesystem task that scans the given path for new media
 type MediaScan struct	{
@@ -34,6 +22,31 @@ type MediaScan struct	{
 	subFolder 	string
 	verbose 		bool
 }
+type attachables struct {
+	art *db.Art
+	md  *db.Metadata
+}
+
+// Cache repetitive entries
+var folderCache = map[string]*db.Folder{}
+var artistCache = map[string]*db.Artist{}
+var albumCache  = map[string]*db.Album{}
+
+// Track folder IDs to HasAttachables (db.Artist & db.Album)
+var fIDHasAttachables = map[int]HasAttachables{}
+
+// Track folder IDs to Attachables (db.Art & db.Metadata)
+var folderAttachables = map[int]attachables{}
+
+// Track Metrics
+var artCount      int = 0
+var artistCount   int = 0
+var albumCount    int = 0
+var songCount     int = 0
+var songUpdate    int = 0
+var folderCount   int = 0
+var metadataCount int = 0
+
 
 // Folders returns the base and sub folders for scanning
 func (fs *MediaScan) Folders()	(string, string)	{
@@ -57,115 +70,129 @@ func (fs *MediaScan) WhoAmI() string {
 }
 
 // Scan scans for media files in the filesystem
-func (fs *MediaScan) Scan(baseFolder, subFolder string, walkCancelChan chan struct{}) (int, error) {
-	// Halt file system walk if needed
-	var mutex sync.RWMutex
-	haltWalk := false
-	go func()	{
-		// Wait until signal recieved
-		<- walkCancelChan
+func (fs *MediaScan) Scan(
+	baseFolder, subFolder string, walkCancelChan chan struct{}) (int, error) {
+		// Halt file system walk if needed
+		var mutex sync.RWMutex
+		haltWalk := false
+		go func(haltWalk bool)	{
+			// Wait until signal recieved
+			<- walkCancelChan
 
-		// Halt fs walk
-		mutex.Lock()
-		haltWalk = true
-		mutex.Unlock()
-	}()
+			// Halt fs walk
+			mutex.Lock()
+			haltWalk = true
+			mutex.Unlock()
+		}(haltWalk)
 
-	// Track metrics
-	artCount    := 0
-	artistCount := 0
-	albumCount  := 0
-	songCount   := 0
-	songUpdate  := 0
-	folderCount := 0
-	artFiles := make(map[int]int)
-	startTime := time.Now()
+		// Track metrics
+		artCount      = 0
+		artistCount   = 0
+		albumCount    = 0
+		songCount     = 0
+		songUpdate    = 0
+		folderCount   = 0
+		metadataCount = 0
+		startTime := time.Now()
 
-	folderCache = map[string]*db.Folder{}
-	artistCache = map[string]*db.Artist{}
-	albumCache  = map[string]*db.Album{}
+		folderCache = map[string]*db.Folder{}
+		artistCache = map[string]*db.Artist{}
+		albumCache  = map[string]*db.Album{}
+		
+		if fs.verbose	{
+			util.Logger.Printf("FS: Scanning: %s", baseFolder)
+		}
 
-	if fs.verbose	{
-		log.Printf("FS: Scanning: %s", baseFolder)
-	}
-
-	godirwalk.Walk(baseFolder, &godirwalk.Options{
-		Callback: func(osPathname string, de *godirwalk.Dirent) error	{
-			info := de.ModeType()
-			log.Printf("FS: Media Scan: Got new file: %s", osPathname)
-			
-			folder, inc, err := handleFolder(osPathname, info)
-			if err != nil {
-				return fmt.Errorf("FS: Media Scan: Error handling folder: %s", err)
-			}
-			if inc {
-				folderCount++
-			}
-			
-			ext := path.Ext(osPathname)
-			if img, audio := imgType[ext], audioType[ext]; !img && !audio {
-				return nil
-			}
-			
-			if _, ok := imgType[ext]; ok {
-				art, inc, err := handleImg(osPathname, info)
+		godirwalk.Walk(baseFolder, &godirwalk.Options{
+			Callback: func(osPathname string, de *godirwalk.Dirent) error	{
+				info := de.ModeType()
+				util.Logger.Printf("FS: Media Scan: Got new file: %s", osPathname)
+				
+				folder, err := handleFolder(osPathname, info)
 				if err != nil {
-					return fmt.Errorf("FS: Media Scan: Error handling image: %s", err)
+					return fmt.Errorf("FS: Media Scan: Error handling folder: %s", err)
 				}
-				if art != nil {
-					artFiles[folder.ID] = art.ID
-					if inc {
-						artCount++
+				if _, ok := folderAttachables[folder.ID]; !ok {
+					folderAttachables[folder.ID] = attachables{}
+				}
+				
+				ext := path.Ext(osPathname)
+				var isMetadata bool = false
+				if osPathname[len(osPathname)-len(metadataFile):] == metadataFile {
+					isMetadata = true
+				}
+
+				if img, audio := imgType[ext], audioType[ext];
+				!img && !audio && !isMetadata {
+					return nil
+				}
+				
+				if _, ok := imgType[ext]; ok {
+					art, err := handleImg(osPathname, folder)
+					if err != nil {
+						return fmt.Errorf("FS: Media Scan: Error handling image: %s", err)
+					}
+					currentVal := folderAttachables[folder.ID]
+					currentVal.art = art
+					folderAttachables[folder.ID] = currentVal
+					return nil
+				}
+
+				if isMetadata {
+					md, err := handleMetadata(osPathname, folder)
+					if err != nil {
+						return fmt.Errorf(
+							"FS: Media Scan: Error handling Metadata: %s", err)
+					}
+					currentVal := folderAttachables[folder.ID]
+					currentVal.md = md
+					folderAttachables[folder.ID] = currentVal
+					return nil
+				}
+
+				if _, ok := audioType[ext]; ok {
+					err := handleAudio(osPathname, info, folder)
+					if err != nil {
+						return fmt.Errorf(
+							"FS: Media Scan: Error handling audio file: %s", err)
 					}
 				}
 				return nil
-			}
-
-			if _, ok := audioType[ext]; ok {
-				changes, err := handleAudio(osPathname, info, folder)
-				if err != nil {
-					return fmt.Errorf("FS: Media Scan: Error handling audio file: %s", err)
-				}
-
-				artistCount += changes[0]
-				albumCount  += changes[1]
-				songCount   += changes[2]
-				songUpdate  += changes[3]
-			}
-			return nil
-		},
-		ErrorCallback: func(osPathname string, err error) godirwalk.ErrorAction {
-			log.Printf("%s", err)
-			return godirwalk.SkipNode
-		},
-		Unsorted: true,
-	})
-
-	for fID, aID := range artFiles {
-		if v, member := attachArt[fID]; member {
-			if aID != 0 && aID != v.GetArtID() {		 
-				if err := v.SetArtID(aID); err != nil {
-					log.Printf("FS: Media Scan: Attach Art Error: ", err)
-				}
-			}
+			},
+			ErrorCallback: func(osPathname string, err error) godirwalk.ErrorAction {
+				util.Logger.Printf("%s", err)
+				return godirwalk.SkipNode
+			},
+			Unsorted: true,
+		})
+		
+		joinAttachables()
+		if err := db.DB.TruncateLog(); err != nil {
+			util.Logger.Printf("FS: Media Scan: Could not truncate WAL File: %v", err)
 		}
-	}
 
-	if fs.verbose {
-		log.Printf("FS: Media Scan Complete [time: %s]", time.Since(startTime).String())
-		log.Printf("FS: Media Scan: Added: [art: %d] [artists: %d] [albums: %d] [songs: %d] [folders: %d]",
-			artCount, artistCount, albumCount, songCount, folderCount)
-		log.Printf("FS: Updated: [songs: %d]", songUpdate)
-	}
+		if fs.verbose {
+			util.Logger.Printf(
+				"FS: Media Scan Complete [time: %s]", time.Since(startTime).String())
+			util.Logger.Printf(
+				"FS: Media Scan: Added: " +
+				"[art: %d] [artists: %d] [albums: %d] [songs: %d] " + 
+				"[folders: %d] [metadata: %d]",
+				artCount, artistCount, albumCount,
+				songCount, folderCount, metadataCount,
+			)
+			
+			util.Logger.Printf("FS: Updated: [songs: %d]", songUpdate)
+		}
 
-	sum := artCount + artistCount + albumCount + songCount + folderCount
-	return sum, nil
+		sum := artCount + artistCount + albumCount + songCount + folderCount
+		return sum, nil
 }
 
-func handleFolder(cPath string, info os.FileMode)	(*db.Folder, bool, error) {
+func handleFolder(cPath string, info os.FileMode)	(*db.Folder, error) {
 	// Check for cached folder
 	if seenFolder, ok := folderCache[cPath]; ok	{
-		return seenFolder, false, nil
+		return seenFolder, nil
 	}
 
 	folder := new(db.Folder)
@@ -175,21 +202,32 @@ func handleFolder(cPath string, info os.FileMode)	(*db.Folder, bool, error) {
 		folder.Path = path.Dir(cPath)
 	}
 	
-	existing, err := folder.Load()
-	if existing != (db.Folder{}) {
-		folderCache[cPath] = &existing
-		return &existing, false, nil
+	err := folder.Load()
+	if err == nil {
+		folderCache[cPath] = folder
+		return folder, nil
 	}
 
 	if err == sql.ErrNoRows  {
-		files, err := godirwalk.ReadDirents(folder.Path, nil)
-		if err != nil {
-			return nil, false, err
-		} else if len(files) == 0 {
-			return nil, false, nil
+		if _, err := os.Stat(path.Join(cPath, metadataFile)); os.IsNotExist(err) {
+			if _, err := os.Create(path.Join(cPath, metadataFile)); err != nil {
+				util.Logger.Printf("FS: Media Scan: Error creating Metadata file: %v", err)
+			} else {
+				util.Logger.Printf(
+					"FS: Media Scan: Handle Folder: Created new Metadata File at: %#v",
+					path.Join(cPath, metadataFile))
+			}
 		}
 
-		log.Printf("FS: Media Scan: Found %v files in %v", len(files), cPath)
+		files, err := godirwalk.ReadDirents(folder.Path, nil)
+		if err != nil {
+			return nil, err
+		} else if len(files) == 0 {
+			return nil, fmt.Errorf(
+				"FS: Media Scan: Found no files in folder: %v", folder.Path)
+		}
+
+		util.Logger.Printf("FS: Media Scan: Found %v files in %v", len(files), cPath)
 		folder.Title = path.Base(folder.Path)
 		parent := new(db.Folder)
 		if info.IsDir() {
@@ -198,177 +236,273 @@ func handleFolder(cPath string, info os.FileMode)	(*db.Folder, bool, error) {
 			parent.Path = path.Dir(path.Dir(cPath))
 		}
 
-		if _, err := parent.Load(); err != nil && err != sql.ErrNoRows {
-			return nil, false, err
+		if err := parent.Load(); err != nil && err != sql.ErrNoRows {
+			return nil, err
+		} else if err == nil {
+			folder.ParentID = parent.ID
 		}
 
-		folder.ParentID = parent.ID
 		if err := folder.Save(); err != nil {
-			return nil, false, err
+			return nil, err
 		}
 	} else {
-		return nil, false, err
+		return nil, err
 	}
 
 	folderCache[folder.Path] = folder
-	return folder, true, nil
+	folderCount++
+	return folder, nil
 }
 
-func handleImg(cPath string, info os.FileMode) (*db.Art, bool, error) {
+func handleImg(cPath string, folder *db.Folder) (*db.Art, error) {
 	art := new(db.Art)
-	art.FileName = cPath
+	art.Path = cPath
 
-	existing, err := art.Load()
-	if existing.FileName == art.FileName {
-		return &existing, false, nil
+	err := art.Load()
+	if err == nil {
+		return art, nil
 	}
 
 	if err == sql.ErrNoRows {
 		data, err := os.Stat(cPath)
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 
+		art.FolderID = folder.ID
 		art.FileSize = data.Size()
 		art.LastModified = data.ModTime().Unix()
-
 		if art.FileSize == 0 {
-			return nil, false, errors.New("Art File Size is 0")
+			return nil, errors.New("Art File Size is 0")
 		}
 		if err := art.Save(); err != nil {
-			return nil, false, err
+			return nil, err
 		} 
-		return art, true, nil
+
+		artCount++
+		return art, nil
 	}
-	return nil, false, err
+	return nil, err
 }
 
-func handleAudio(cPath string, info os.FileMode, folder *db.Folder) ([]int, error)	{
+func handleMetadata(cPath string, folder *db.Folder) (*db.Metadata, error) {
+	md := new(db.Metadata)
+	md.Path = cPath
+	
+	err := md.Load()
+	if err == nil {
+		return md, nil
+	}
+
+	if err == sql.ErrNoRows {
+		data, err := os.Stat(cPath)
+		if err != nil {
+			return nil, err
+		}
+
+		md.FolderID = folder.ID
+		md.FileSize = data.Size()
+		md.LastModified = data.ModTime().Unix()
+		if err := md.Save(); err != nil {
+			return nil, err
+		} 
+
+		metadataCount++
+		return md, nil
+	}
+	return nil, err
+}
+
+func handleAudio(cPath string, info os.FileMode, folder *db.Folder) error	{
 	song, err := db.SongFromFile(cPath)
 	if err != nil {
-		return []int{}, err
+		return err
 	}
 
 	data, err := os.Stat(cPath)
 	if err != nil {
-		return []int{}, err
+		return err
 	}
 	if data.Size() == 0 {
-		return []int{}, errors.New("Audio File Size is 0")
+		return errors.New("Audio File Size is 0")
 	}
 
-	song.FileName = cPath
+	song.Path = cPath
 	song.FileSize = data.Size()
 	song.LastModified = data.ModTime().Unix()
 	song.FolderID = folder.ID
 	song.FileTypeID = db.FileTypeMap[path.Ext(cPath)]
 
-	artist, countArtist, err := handleArtist(song)
+	artist, err := handleArtist(song)
 	if err != nil {
-		return []int{}, err
+		return err
 	}
 	song.ArtistID = artist.ID
+	fIDHasAttachables[artist.FolderID] = artist
 
-	album, countAlbum, err := handleAlbum(song)
+	album, err := handleAlbum(song)
 	if err != nil {
-		return []int{}, err
+		return err
 	}
 	song.AlbumID = album.ID
-	
-	countSong, countUpdate, err := checkForModification(song)
+	fIDHasAttachables[album.FolderID] = album
+
+	err = checkForModification(song)
 	if err != nil {
-		return []int{}, err
+		return err
 	}
-	return []int{countArtist, countAlbum, countSong, countUpdate}, nil
+	return nil
 }
 
-func handleArtist(song *db.Song) (*db.Artist, int, error) {
+func handleArtist(song *db.Song) (*db.Artist, error) {
 	artist := db.GetArtistFromSong(song)
 	if seenArtist, ok := artistCache[artist.Title]; ok {
-		return seenArtist, 0, nil
+		return seenArtist, nil
 	}
 
-	existing, err := artist.Load()
-	if existing != (db.Artist{}) {
-		artistCache[artist.Title] = &existing
-		return &existing, 0, nil
+	err := artist.Load()
+	if err == nil {
+		artistCache[artist.Title] = artist
+		return artist, nil
 	}
 
 	if err == sql.ErrNoRows 	{
-		artistDir := filepath.Dir(filepath.Dir(song.FileName))
-		artist.FolderID = folderCache[artistDir].ID
+		f := new(db.Folder)
+		f.ID = song.FolderID
+		
+		artist.FolderID = 0
+		if err := db.DB.LoadFolder(f); err == nil {
+			artist.FolderID = f.ParentID
+		}
+		artist.MBID = errStartValue
+		artist.DiscogsID = errStartValue
+		artist.MetadataID = 0
 		if err := artist.Save(); err != nil {
-			return nil, 0, fmt.Errorf("FS: Media Scan: Handle Artist: Error Saving: %v", err)
+			return nil, fmt.Errorf(
+				"FS: Media Scan: Handle Artist: Error Saving: %v", err)
 		} 
 
-		attachArt[artist.FolderID] = artist
+		artistCount++
 		artistCache[artist.Title] = artist
-		log.Printf("FS: Media Scan: Artist: [#%05d] %s", artist.ID, artist.Title)
-		return artist, 1, nil
+		util.Logger.Printf("FS: Media Scan: Artist: [#%05d] %s", artist.ID, artist.Title)		
+		return artist, nil
 	}	
 	
-	return nil, 0, fmt.Errorf("FS: Media Scan: Handle Artist: Other Error: %v", err)
+	return nil, fmt.Errorf("FS: Media Scan: Handle Artist: Other Error: %v", err)
 }
 
-func handleAlbum(song *db.Song) (*db.Album, int, error) {
+func handleAlbum(song *db.Song) (*db.Album, error) {
 	album := db.GetAlbumFromSong(song)
 	album.ArtistID = song.ArtistID
 	albumCacheKey := strconv.Itoa(album.ArtistID) + "_" + album.Title 
 	if seenAlbum, ok := albumCache[albumCacheKey]; ok {
-		return seenAlbum, 0, nil
+		return seenAlbum, nil
 	} 
 
-	existing, err := album.Load();
-	if existing != (db.Album{}) {
-		albumCache[albumCacheKey] = &existing
-		return &existing, 0, nil
+	err := album.Load()
+	if err == nil {
+		albumCache[albumCacheKey] = album
+		return album, nil
 	}
 
 	if err == sql.ErrNoRows {
 		album.ArtistID = song.ArtistID
-		album.FolderID = folderCache[filepath.Dir(song.FileName)].ID
+		album.FolderID = song.FolderID
+		album.MBID = errStartValue
+		album.DiscogsID = -1
+		album.MetadataID = 0
 		if err := album.Save(); err != nil {
-			return nil, 0, fmt.Errorf("FS: Media Scan: Handle Album: Error Saving: %v", err)
+			return nil, fmt.Errorf(
+				"FS: Media Scan: Handle Album: Error Saving: %v", err)
 		}
 		
-		attachArt[album.FolderID] = album
+		albumCount++
 		albumCache[albumCacheKey] = album
-		log.Printf("FS: Media Scan: Album: [#%05d] %s - %d - %s", album.ID, album.Artist, album.Year, album.Title)
-		return album, 1, nil
+		util.Logger.Printf(
+			"FS: Media Scan: Album: [#%05d] %s - %d - %s",
+			album.ID, album.Artist, album.Year, album.Title)
+		return album, nil
 	}
 
-	return nil, 0, fmt.Errorf("FS: Media Scan: Handle Album: Other Error: %s", err)
+	return nil, fmt.Errorf("FS: Media Scan: Handle Album: Other Error: %s", err)
 }
 
-func checkForModification(origin *db.Song) (int, int, error)	{
+func checkForModification(origin *db.Song) error	{
 	song2 := new(db.Song)
-	song2.FileName = origin.FileName
+	song2.Path = origin.Path
 
 	// Check if the song exists
-	existing, err := song2.Load()
-	if existing != (db.Song{})  {
-		if origin.LastModified > existing.LastModified {
+	err := song2.Load()
+	if err == nil  {
+		if origin.LastModified > song2.LastModified {
 			// Update Existing
 			origin.ID = song2.ID
 			if err2 := origin.Update(); err2 != nil {
-				return 0, 0, fmt.Errorf("FS: Media Scan: Check Modifications: %v", err2)
+				return fmt.Errorf("FS: Media Scan: Check Modifications: %v", err2)
 			}
-			return 0, 1, nil
+
+			songUpdate++
+			return nil
 		}
 
 		// The song exists, but it hasn't been changed
-		origin = &existing
-		return 0, 0, nil
+		origin = song2
+		return nil
 	}
 
 	if err == sql.ErrNoRows {
 		// The song didn't save. So do that...
+		origin.MBID = errStartValue
 		if err2 := origin.Save(); err2 != nil && err2 != sql.ErrNoRows {
-			return 0, 0, fmt.Errorf("FS: Media Scan: Check Modifications: %v", err2)
+			return fmt.Errorf("FS: Media Scan: Check Modifications: %v", err2)
 		}	else if err2 == nil {
-			return 1, 0, nil
+			songCount++
+			return nil
+		}
+	}	
+	return fmt.Errorf("FS: Media Scan: Check Modification Other Error: %v", err)
+}
+
+func joinAttachables() {
+	for k, v := range fIDHasAttachables {
+		if _, ok := folderAttachables[k]; !ok {
+			util.Logger.Printf("FS: Media Scan: No attachables for Folder ID: %v", k)
+			continue
+		}
+
+		switch x := v.(type) {
+		case *db.Artist:
+			artist := *x
+			if folderAttachables[k].md != nil {
+				md := *folderAttachables[k].md
+				artist.MetadataID = md.ID
+			}
+			if folderAttachables[k].art != nil {
+				art := *folderAttachables[k].art
+				artist.ArtID = art.ID
+			}
+			if err := artist.Update(); err != nil {
+				util.Logger.Printf(
+					"FS: Media Scan: Error updating Artist %v: %v", artist.Title, err)
+			}
+		case *db.Album:	
+			album := *x	
+			if folderAttachables[k].md != nil {
+				md := *folderAttachables[k].md
+				album.MetadataID = md.ID
+			}
+			if folderAttachables[k].art != nil {
+				art := *folderAttachables[k].art
+				album.ArtID = art.ID
+			}
+			if err := album.Update(); err != nil {
+				util.Logger.Printf(
+					"FS: Media Scan: Error updating Album %v - %v: %v", 
+					album.Artist, album.Title, err)
+			}
+		default:
+			util.Logger.Printf(
+				"FS: Media Scan: Unable to attach objects to unknown Type: %T", v)
 		}
 	}
-	
-	return 0, 0, fmt.Errorf("FS: Media Scan: Check Modification Other Error: %v", err)
 }

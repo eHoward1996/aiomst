@@ -77,32 +77,40 @@ func (s *SqlBackend) DeleteArtist(a *Artist) error {
 }
 
 // LoadArtist loads an Artist from the database, populating the parameter struct
-func (s *SqlBackend) LoadArtist(a *Artist) (Artist, error) {
+func (s *SqlBackend) LoadArtist(a *Artist) error {
 	// Load the artist via ID if available
-	r := *a
 	if a.ID != 0 {
-		if err := s.db.Get(&r, "SELECT * FROM artists WHERE id = ?", a.ID);
+		if err := s.db.Get(a, "SELECT * FROM artists WHERE id = ?", a.ID);
 		err != nil {
-			return Artist{}, err
+			return err
 		}
-		return r, nil
+		return nil
 	}
 
 	// Load via title
-	if err := s.db.Get(&r, "SELECT * FROM artists WHERE title = ?;", a.Title);
+	if err := s.db.Get(a, "SELECT * FROM artists WHERE title = ?;", a.Title);
 	err != nil {
-		return Artist{}, err
+		return err
 	}
-	return r, nil
+	return nil
 }
 
 // SaveArtist attempts to save an Artist to the database
 func (s *SqlBackend) SaveArtist(a *Artist) error {
 	// Insert new artist
-	query := "INSERT INTO artists (art_id, folder_id, title, normalized_title) " +
-	"VALUES (?, ?, ?, ?);"
+	query := `INSERT INTO artists 
+		(
+			art_id, mb_id, discogs_id, 
+			metadata_id, folder_id, title,
+			normalized_title
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?);`
 	tx := s.db.MustBegin()
-	tx.Exec(query, a.ArtID, a.FolderID, a.Title, a.NormalizedTitle)
+	tx.MustExec(
+		query,
+		a.ArtID, a.MBID, a.DiscogsID,
+		a.MetadataID, a.FolderID, a.Title,
+		a.NormalizedTitle)
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
@@ -111,20 +119,31 @@ func (s *SqlBackend) SaveArtist(a *Artist) error {
 
 	// If no ID, reload to grab it
 	if a.ID == 0 {
-		artist, err := s.LoadArtist(a)
-		if err != nil {
+		if err := s.LoadArtist(a); err != nil {
 			return err
 		}
-		*a = artist
 	}
 	return nil
 }
 
-// UpdateArtistArt updates the Artists artId
-func (s *SqlBackend) UpdateArtistArt(a *Artist) error {
-	query := "UPDATE artists SET art_id = ? WHERE id = ?;"
+// UpdateArtist updates an Artist in the database
+func (s *SqlBackend) UpdateArtist(a *Artist) error {
+	query := `UPDATE artists
+		SET
+			mb_id = ?,
+			discogs_id = ?,
+			metadata_id = ?,
+			art_id = ?,
+			folder_id = ?,
+			title = ?,
+			normalized_title = ?
+		WHERE id = ?;`
 	tx := s.db.MustBegin()
-	tx.Exec(query, a.ArtID, a.ID)
+	tx.Exec(
+		query, 
+		a.MBID, a.DiscogsID, a.MetadataID, a.ArtID,
+		a.FolderID, a.Title, a.NormalizedTitle, a.ID,
+	)
 	return tx.Commit()
 }
 

@@ -2,10 +2,10 @@ package api
 
 import (
 	"database/sql"
-	"log"
 	"strconv"
 
 	"github.com/eHoward1996/aiomst/db"
+	"github.com/eHoward1996/aiomst/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,7 +30,7 @@ func GetSongs(c *gin.Context) {
 func handleSongNoID(c *gin.Context)	{
 	songs, err := db.DB.AllSongsByTitle()
 	if err != nil {
-		log.Print(err)
+		util.Logger.Print(err)
 		c.JSON(500, serverErr)
 		return
 	}
@@ -44,26 +44,25 @@ func handleSongNoID(c *gin.Context)	{
 func handleSongID(sID string, c *gin.Context)	{
 	id, err := strconv.Atoi(sID)
 	if err != nil {
-		log.Print(err)
+		util.Logger.Print(err)
 		c.JSON(200, ErrGeneric)
 		return
 	}
 
 	song := db.Song{ID: id}
-	s, err := song.Load()
-	if err != nil {
+	if err := song.Load(); err != nil {
 		if err == sql.ErrNoRows {
 			c.IndentedJSON(404, "Song ID not found.")
 			return
 		}
 
-		log.Print(err)
+		util.Logger.Print(err)
 		c.IndentedJSON(500, ErrGeneric)
 		return
 	}
 
 	resp := new(SongsResponse)
-	resp.Songs = []db.Song{s}
+	resp.Songs = []db.Song{song}
 	c.IndentedJSON(200, resp)
 	return
 }

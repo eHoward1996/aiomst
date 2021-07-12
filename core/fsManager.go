@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/eHoward1996/aiomst/fs"
+	"github.com/eHoward1996/aiomst/fs/integrated"
 	"github.com/eHoward1996/aiomst/util"
 
 	"github.com/radovskyb/watcher"
@@ -20,8 +21,8 @@ var fsTaskCount = 0
 // Initialize a queue to cancel filesystem tasks
 var cancelQueue = make(chan chan struct{}, 10)
 
-func fsManager(mediaPath string, fsKillChan chan struct{})	{
-	log.Println("FS MANAGER STARTED")
+func fsManager(mediaPath string, sqlFile string, fsKillChan chan struct{})	{
+	util.Logger.Print("FS MANAGER STARTED")
 
 	// Initialize filesystem watcher
 	watcherChan := make(chan struct{})
@@ -32,11 +33,22 @@ func fsManager(mediaPath string, fsKillChan chan struct{})	{
 	o.Verbose(true)
 	fsTaskQueue <- o
 
+	// Queue a media scan
 	m := new(fs.MediaScan)
 	m.SetFolders(mediaPath, "")
 	m.Verbose(true)
 	fsTaskQueue <- m
 
+	// // Queue a job to integrate third party data
+	go func(watcherChan chan struct{}) {
+		<- watcherChan
+
+		for {
+			tpi := new(integrated.TPIntegrator)
+			tpi.Integrate()
+			time.Sleep(time.Hour * 24)
+		}
+	}(watcherChan)
 
 	go handleFSTasks(watcherChan)
 	go handleFSEvents(watcherChan)
@@ -49,7 +61,7 @@ func handleFSTasks(watcherChan chan struct{}) {
 		select {
 		case task := <- fsTaskQueue:
 			// Create a channel to halt the scan
-			log.Printf("FS: Got new task (WhoAmI ==> %s)", task.WhoAmI())
+			util.Logger.Printf("FS: Got new task (WhoAmI ==> %s)", task.WhoAmI())
 			cancelChan := make(chan struct{})
 			cancelQueue <- cancelChan
 
@@ -58,12 +70,12 @@ func handleFSTasks(watcherChan chan struct{}) {
 			
 			changes, err := task.Scan(baseFolder, subFolder, cancelChan)
 			if err != nil	{
-				log.Printf("FS: Task Errored: %v", err)
+				util.Logger.Printf("FS: Task Errored: %v", err)
 			}
 
 			if changes > 0 {
 				util.UpdateScanTime()
-				log.Printf("FS: New Scan Time: %v", util.ScanTimePretty())
+				util.Logger.Printf("FS: New Scan Time: %v", util.ScanTimePretty())
 			}
 
 			cancelChan = <- cancelQueue
@@ -71,7 +83,7 @@ func handleFSTasks(watcherChan chan struct{}) {
 			fsTaskCount++
 
 			if fsTaskCount == 2 {
-				log.Print("FS: Finished initial media and orphan scans")
+				util.Logger.Print("FS: Finished initial media and orphan scans")
 				close(watcherChan)
 			}
 		}
@@ -108,7 +120,7 @@ func handleFSEvents(watcherChan chan struct{}) {
 					fsTaskQueue <- o
 				}
 			case err := <- w.Error:
-				log.Print(err)
+				util.Logger.Print(err)
 				return 
 			}
 		}
@@ -121,7 +133,7 @@ func handleFSEvents(watcherChan chan struct{}) {
 	if err := w.Start(1 * time.Minute); err != nil {
 		log.Fatal(err)
 	}
-	log.Println("FS: Watching folder:", util.C.MediaFolderPath())
+	util.Logger.Print("FS: Watching folder:", util.C.MediaFolderPath())
 }
 
 func fsWatchKillSig(fsKillChan chan struct{})	{
@@ -130,7 +142,7 @@ func fsWatchKillSig(fsKillChan chan struct{})	{
 		// Stop filesystem manager
 		case <- fsKillChan:
 			// Halt any in-progress tasks
-			log.Println("FS: halting tasks")
+			util.Logger.Print("FS: halting tasks")
 			for i := 0; i < len(cancelQueue); i++ {
 				// Receive a channel
 				f := <-cancelQueue
@@ -140,11 +152,11 @@ func fsWatchKillSig(fsKillChan chan struct{})	{
 
 				// Send termination
 				f <- struct{}{}
-				log.Println("FS: task halted")
+				util.Logger.Print("FS: task halted")
 			}
 
 			// Inform manager that shutdown is complete
-			log.Println("FS MANAGER STOPPED!")
+			util.Logger.Print("FS MANAGER STOPPED!")
 			fsKillChan <- struct{}{}
 			return
 		}

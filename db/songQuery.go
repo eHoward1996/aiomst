@@ -36,76 +36,155 @@ func (s *SqlBackend) songQuery(query string, args ...interface{}) ([]Song, error
 
 // AllSongs loads a slice of all Song structs from the database
 func (s *SqlBackend) AllSongs() ([]Song, error) {
-	return s.songQuery("SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs " +
-		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id;")
+	return s.songQuery(
+		`SELECT 
+			songs.*, 
+			artists.title AS artist, 
+			albums.title AS album
+		FROM songs 
+		JOIN artists ON songs.artist_id = artists.id 
+		JOIN albums ON songs.album_id = albums.id;`,
+	)
 }
 
 // AllSongsByTitle loads a slice of all Song structs from the database by Song
 // title case insensitive
 func (s *SqlBackend) AllSongsByTitle() ([]Song, error) {
-	return s.songQuery("SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs " +
-		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id " +
-		"ORDER BY title COLLATE NOCASE ASC;")
+	return s.songQuery(
+		`SELECT 
+			songs.*,
+			artists.title AS artist,
+			albums.title AS album
+		FROM songs
+		JOIN artists ON songs.artist_id = artists.id 
+		JOIN albums ON songs.album_id = albums.id
+		ORDER BY title COLLATE NOCASE ASC;`,
+	)
 }
 
 // LimitSongs loads a slice of Song structs from the database using SQL limit, where the first parameter
 // specifies an offset and the second specifies an item count
 func (s *SqlBackend) LimitSongs(offset int, count int) ([]Song, error) {
-	return s.songQuery("SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
-		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-		"LIMIT ?, ?;", offset, count)
+	return s.songQuery(
+		`SELECT 
+			songs.*,
+			artists.title AS artist,
+			albums.title AS album 
+		FROM songs
+		JOIN artists ON songs.artist_id = artists.id 
+		JOIN albums ON songs.album_id = albums.id 
+		LIMIT ?, ?;`,
+		offset,
+		count,
+	)
 }
 
 // RandomSongs loads a slice of 'n' random song structs from the database
 func (s *SqlBackend) RandomSongs(n int) ([]Song, error) {
-	return s.songQuery("SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
-		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-		"ORDER BY RANDOM() LIMIT ?;", n)
+	return s.songQuery(
+		`SELECT 
+			songs.*,
+			artists.title AS artist,
+			albums.title AS album 
+		FROM songs 
+		JOIN artists ON songs.artist_id = artists.id 
+		JOIN albums ON songs.album_id = albums.id
+		ORDER BY RANDOM() LIMIT ?;`,
+		n,
+	)
 }
 
 // SearchSongs loads a slice of all Song structs from the database which contain
 // titles that match the specified search query
 func (s *SqlBackend) SearchSongs(query string) ([]Song, error) {
-	return s.songQuery("SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
-		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-		"WHERE songs.normalized_title LIKE ?;", "%"+query+"%")
+	return s.songQuery(
+		`SELECT 
+			songs.*,
+			artists.title AS artist,
+			albums.title AS album 
+		FROM songs
+		JOIN artists ON songs.artist_id = artists.id 
+		JOIN albums ON songs.album_id = albums.id
+		WHERE songs.normalized_title LIKE ?;`,
+		"%"+query+"%",
+	)
 }
 
 // SongsForAlbum loads a slice of all Song structs which have the matching album ID
 func (s *SqlBackend) SongsForAlbum(ID int) ([]Song, error) {
-	return s.songQuery("SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
-		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-		"WHERE songs.album_id = ?;", ID)
+	return s.songQuery(
+		`SELECT 
+			songs.*,
+			artists.title AS artist,
+			albums.title AS album 
+		FROM songs
+		JOIN artists ON songs.artist_id = artists.id 
+		JOIN albums ON songs.album_id = albums.id
+		WHERE songs.album_id = ?;`,
+		ID,
+	)
 }
 
 // SongsForArtist loads a slice of all Song structs which have the matching artist ID
 func (s *SqlBackend) SongsForArtist(ID int) ([]Song, error) {
-	return s.songQuery("SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
-		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-		"WHERE songs.artist_id = ?;", ID)
+	return s.songQuery(
+		`SELECT 
+			songs.*,
+			artists.title AS artist,
+			albums.title AS album 
+		FROM songs
+		JOIN artists ON songs.artist_id = artists.id 
+		JOIN albums ON songs.album_id = albums.id
+		WHERE songs.artist_id = ?;`, 
+		ID,
+	)
 }
 
 // SongsForFolder loads a slice of all Song structs which have the matching folder ID
 func (s *SqlBackend) SongsForFolder(ID int) ([]Song, error) {
-	return s.songQuery("SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
-		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-		"WHERE songs.folder_id = ?;", ID)
+	return s.songQuery(
+		`SELECT 
+			songs.*,
+			artists.title AS artist,
+			albums.title AS album 
+		FROM songs
+		JOIN artists ON songs.artist_id = artists.id
+		JOIN albums ON songs.album_id = albums.id
+		WHERE songs.folder_id = ?;`,
+		ID,
+	)
 }
 
 // SongsInPath loads a slice of all Song structs residing under the specified
 // filesystem path from the database
 func (s *SqlBackend) SongsInPath(path string) ([]Song, error) {
-	return s.songQuery("SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
-		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-		"WHERE songs.file_name LIKE ?;", path+"%")
+	return s.songQuery(
+		`SELECT 
+			songs.*,
+			artists.title AS artist,
+			albums.title AS album
+		FROM songs 
+		JOIN artists ON songs.artist_id = artists.id 
+		JOIN albums ON songs.album_id = albums.id 
+		WHERE songs.path LIKE ?;`, 
+		path+"%",
+	)
 }
 
 // SongsNotInPath loads a slice of all Song structs that do not reside under the specified
 // filesystem path from the database
 func (s *SqlBackend) SongsNotInPath(path string) ([]Song, error) {
-	return s.songQuery("SELECT songs.*,artists.title AS artist,albums.title AS album FROM songs "+
-		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-		"WHERE songs.file_name NOT LIKE ?;", path+"%")
+	return s.songQuery(
+		`SELECT 
+			songs.*, 
+			artists.title AS artist,
+			albums.title AS album
+		FROM songs 
+		JOIN artists ON songs.artist_id = artists.id 
+		JOIN albums ON songs.album_id = albums.id 
+		WHERE songs.path NOT LIKE ?;`,
+		path+"%",
+	)
 }
 
 // CountSongs fetches the total number of Artist structs from the database
@@ -123,50 +202,79 @@ func (s *SqlBackend) DeleteSong(a *Song) error {
 	}
 
 	// Else, attempt to remove the song by its file name
-	tx.Exec("DELETE FROM songs WHERE file_name = ?;", a.FileName)
+	tx.Exec("DELETE FROM songs WHERE path = ?;", a.Path)
 	return tx.Commit()
 }
 
 // LoadSong loads a Song from the database, populating the parameter struct
-func (s *SqlBackend) LoadSong(a *Song) (Song, error) {
+func (s *SqlBackend) LoadSong(a *Song) error {
 	// Load the song via ID if available
-	r := *a
 	if a.ID != 0 {
 		if err := s.db.Get(
-			&r, 
-			"SELECT songs.*, artists.title AS artist, albums.title AS album FROM songs "+
-			"JOIN artists ON songs.artist_id = artists.id " +
-			"JOIN albums ON songs.album_id = albums.id WHERE songs.id = ?;", a.ID);
+			a, 
+			`SELECT 
+				songs.*, 
+				artists.title AS artist, 
+				albums.title AS album 
+			FROM songs 
+			JOIN artists ON songs.artist_id = artists.id  
+			JOIN albums ON songs.album_id = albums.id 
+			WHERE songs.id = ?;`,
+			a.ID,
+		);
 		err != nil {
-			return Song{}, err
+			return err
 		}
-		return r, nil
+		return nil
 	}
 
 	// Load via file name
 	if err := s.db.Get(
-		&r,
-		"SELECT songs.*, artists.title AS artist, albums.title AS album FROM songs "+
-		"JOIN artists ON songs.artist_id = artists.id JOIN albums ON songs.album_id = albums.id "+
-		"WHERE songs.file_name = ?;", a.FileName);
-	err != nil {
-		return Song{}, err
+		a,
+		`SELECT 
+			songs.*, 
+			artists.title AS artist, 
+			albums.title AS album 
+		FROM songs 
+		JOIN artists ON songs.artist_id = artists.id 
+		JOIN albums ON songs.album_id = albums.id 
+		WHERE songs.path = ?;`, 
+		a.Path,
+	); err != nil {
+		return err
 	}
-	return r, nil
+	return nil
 }
 
 // SaveSong attempts to save a Song to the database
 func (s *SqlBackend) SaveSong(a *Song) error {
 	// Insert new song
-	query := "INSERT INTO songs (album_id, artist_id, bitrate, " + 
-		"channels, comment, file_name, file_size, file_type_id, " +
-		"folder_id, genre, last_modified, length, sample_rate, " + 
-		"title, normalized_title, track, year) " +
-		"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
+	query := `INSERT INTO songs (
+			mb_id, album_id, artist_id,
+			bitrate, channels, comment, 
+			path, file_size, file_type_id, 
+			folder_id, genre, last_modified, 
+			length, sample_rate, title,	
+			normalized_title, track, year
+		)  
+		VALUES (
+			?, ?, ?, 
+			?, ?, ?,
+			?, ?, ?, 
+			?, ?, ?,
+			?, ?, ?, 
+			?, ?, ?
+		);`
 	tx := s.db.MustBegin()
-	tx.Exec(query, a.AlbumID, a.ArtistID, a.Bitrate, a.Channels, a.Comment, 
-		a.FileName, a.FileSize, a.FileTypeID,	a.FolderID, a.Genre, a.LastModified,
-		a.Length, a.SampleRate, a.Title, a.NormalizedTitle, a.Track, a.Year)
+	tx.MustExec(
+		query, 
+		a.MBID, a.AlbumID, a.ArtistID,
+		a.Bitrate, a.Channels, a.Comment,
+		a.Path, a.FileSize, a.FileTypeID,
+		a.FolderID, a.Genre, a.LastModified,
+		a.Length, a.SampleRate, a.Title,
+		a.NormalizedTitle, a.Track, a.Year,
+	)
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
@@ -175,11 +283,9 @@ func (s *SqlBackend) SaveSong(a *Song) error {
 
 	// If no ID, reload to grab it
 	if a.ID == 0 {
-		song, err := s.LoadSong(a)
-		if err != nil {
+		if err := s.LoadSong(a); err != nil {
 			return err
 		}
-		*a = song 
 	}
 	return nil
 }
@@ -187,13 +293,24 @@ func (s *SqlBackend) SaveSong(a *Song) error {
 // UpdateSong attempts to update a Song in the database
 func (s *SqlBackend) UpdateSong(a *Song) error {
 	// Update existing song
-	query := "UPDATE songs SET album_id = ?, artist_id = ?, bitrate = ?, channels = ?, comment = ?, " +
-		"file_size = ?, folder_id = ?,  genre = ?, last_modified = ?, length = ?, sample_rate = ?, " +
-		"title = ?, track = ?, year = ? WHERE id = ?;"
+	query := `UPDATE songs 
+		SET 
+			mb_id = ?, album_id = ?, artist_id = ?, 
+			bitrate = ?, channels = ?, comment = ?,
+			file_size = ?, folder_id = ?, genre = ?,
+			last_modified = ?, length = ?, sample_rate = ?, 
+			title = ?, track = ?, year = ? 
+		WHERE id = ?;`
 	tx := s.db.MustBegin()
-	tx.Exec(query, a.AlbumID, a.ArtistID, a.Bitrate, a.Channels, a.Comment, a.FileSize,
-		a.FolderID, a.Genre, a.LastModified, a.Length, a.SampleRate, a.Title, a.Track, a.Year, a.ID)
+	tx.Exec(
+		query, 
+		a.MBID, a.AlbumID, a.ArtistID,
+		a.Bitrate, a.Channels, a.Comment, 
+		a.FileSize, a.FolderID, a.Genre, 
+		a.LastModified, a.Length, a.SampleRate, 
+		a.Title, a.Track, a.Year,
+		a.ID,
+	)
 
-	// Commit transaction
 	return tx.Commit()
 }

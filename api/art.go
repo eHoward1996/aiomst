@@ -30,8 +30,7 @@ func GetArt(c *gin.Context) {
 	}
 
 	art := &db.Art{ID: id}
-	a, err := art.Load()
-	if err != nil {
+	if err := art.Load(); err != nil {
 		if err == sql.ErrNoRows {
 			c.IndentedJSON(404, "Art ID not found")
 			return
@@ -41,7 +40,7 @@ func GetArt(c *gin.Context) {
 		return
 	}
 
-	stream, err := a.Stream()
+	stream, err := art.Stream()
 	if err != nil {
 		c.IndentedJSON(404, err)
 		return
