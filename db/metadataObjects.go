@@ -5,6 +5,7 @@ import "time"
 type ArtistMetadata struct {
 	ArtistName  string              `json:"artist_name"`
 	MusicBrainz MusicBrainzMetadata `json:"musicbrainz,omitempty"`
+	Discogs 		DiscogsMetadata     `json:"discogs,omitempty"`
 }
 
 type AlbumMetadata struct {
@@ -77,15 +78,15 @@ type MusicBrainzTrack struct {
 }
 
 type DiscogsMetadata struct {
-	Styles    []string        `json:"styles"`
-	Genres    []string        `json:"genres"`
-	Title     string          `json:"title"`
-	Year      int             `json:"year"`
-	Tracklist []DiscogsTrack  `json:"tracklist"`
+	Styles    []string        `json:"styles,omitempty"`
+	Genres    []string        `json:"genres,omitempty"`
+	Title     string          `json:"title,omitempty"`
+	Year      int             `json:"year,omitempty"`
+	Tracklist []DiscogsTrack  `json:"tracklist,omitempty"`
 	Artists   []DiscogsArtist `json:"artists"`
-	Images    []DiscogsImage  `json:"images"`
-	Videos    []DiscogsVideo  `json:"videos"`
-	URI       string          `json:"uri"`
+	Images    []DiscogsImage  `json:"images,omitempty"`
+	Videos    []DiscogsVideo  `json:"videos,omitempty"`
+	URI       string          `json:"uri,omitempty"`
 }
 
 type DiscogsTrack struct {
@@ -98,11 +99,13 @@ type DiscogsTrack struct {
 }
 
 type DiscogsArtist struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	ResourceURL string `json:"resource_url"`
-	Role        string `json:"role"`
-	Tracks      string `json:"tracks"`
+	ID          int      `json:"id"`
+	Name        string   `json:"name"`
+	Realname    string   `json:"real_name"`
+	ResourceURL string   `json:"resource_url"`
+	Role        string   `json:"role,omitempty"`
+	Tracks      string   `json:"tracks,omitempty"`
+	Members     []string `json:"members,omitempty"`
 }
 
 type DiscogsImage struct {

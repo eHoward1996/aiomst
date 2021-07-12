@@ -1,13 +1,17 @@
 package integrated
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/divan/num2words"
+	"github.com/eHoward1996/aiomst/db"
+	"github.com/eHoward1996/aiomst/util"
 	"github.com/irlndts/go-discogs"
 	"github.com/pascoej/gomusicbrainz"
 )
@@ -20,14 +24,18 @@ type sendAlbum struct {
 	Title      string
 }
 
-type sendArtist struct {}
-
-type mbArtistResponse struct {}
+type sendArtist struct {
+	ID 				 int
+	Title      string
+	MetadataID int
+	AlbumMBID  string
+	DiscogsID  int
+}
 
 // Object that holds a musicbrainz response. Either a Album or Artist type.
 type musicbrainzResponse struct {
 	AlbumResponse  *gomusicbrainz.Release
-	ArtistResponse *mbArtistResponse
+	ArtistResponse *gomusicbrainz.Artist
 }
 
 type discogsArtistResponse struct {}
@@ -41,6 +49,7 @@ type discogsResponse struct {
 type recvAlbum struct {
 	AlbumID       int
 	Album         string
+	ArtistID      int
 	Artist        string
 	MetadataID    int
 	MBRelease     *gomusicbrainz.Release
@@ -227,6 +236,176 @@ func repeatRequest(req func() (interface{}, error)) (interface{}, error) {
 		e = err
 	}
 	return nil, fmt.Errorf("Request failed: %v", e)
+}
+
+
+func printReceivedAlbum(count, numAlbums int, result *recvAlbum) {	
+	mbId := "errored"
+	dsId := -1
+	if result.MBRelease != nil {
+		mbId = string(result.MBRelease.ID)
+	}
+	if result.DiscogsMaster != nil {
+		dsId = result.DiscogsMaster.ID
+	}
+
+	artistString := formatOutput(result.Artist, 18)
+	albumString := formatOutput(result.Album, 18)
+	processedStr := fmt.Sprintf(
+		"(%v of %v) %v - %v MBID: %v\tDiscogsID: %v", count, numAlbums,
+		artistString, albumString, formatOutput(mbId, 13), dsId)
+	util.Logger.Print(processedStr)
+}
+
+func updateAlbum(recv *recvAlbum) error {
+	album := &db.Album{ID: recv.AlbumID}
+	if err := db.DB.LoadAlbum(album); err != nil {
+		return err
+	}
+
+	if recv.MBRelease != nil {
+		album.MBID = string(recv.MBRelease.ID)
+	}
+	if recv.DiscogsMaster != nil {
+		album.DiscogsID = recv.DiscogsMaster.ID
+	}
+	
+	return album.Update()
+}
+
+func updateArtist(recv *recvAlbum) error {
+	artist := &db.Artist{ID: recv.ArtistID}
+	if err := db.DB.LoadArtist(artist); err != nil {
+		return err
+	}
+
+	if recv.MBRelease != nil && recv.MBRelease.ArtistCredit != nil {
+		mbidList := make([]string, 0)
+		for _, aCredit := range recv.MBRelease.ArtistCredit.NameCredits {
+			mbArtist := aCredit.Artist
+			if isSimilarString(mbArtist.Name, artist.Title) {
+				mbidList = append(mbidList, string(mbArtist.ID))
+			}
+		}
+		mbidString := strings.Join(mbidList, ",")
+		if mbidString != "" {
+			artist.MBID = mbidString
+		}
+	}
+
+	if recv.DiscogsMaster != nil {
+		discList := make([]string, 0)
+		for _, aSource := range recv.DiscogsMaster.Artists {
+			if isSimilarString(aSource.Name, artist.Title) {
+				discList = append(discList, strconv.Itoa(aSource.ID))
+			}
+		}
+		if len(discList) != 0 {
+			artist.DiscogsID = strings.Join(discList, ",")
+		}
+	}
+
+	return artist.Update()
+}
+
+func (i TPIntegrator) createAlbumMetadata(recv *recvAlbum) {
+	albumObj := &db.Album{ID: recv.AlbumID}
+	if err := albumObj.Load(); err != nil {
+		util.Logger.Printf(
+			"FS: Third Party Integrator: Error loading album with ID: %v",
+			albumObj.ID)
+		return
+	}
+
+	md, err := albumObj.GetMetadataObj()
+	if err != nil {
+		util.Logger.Printf(
+			"FS: Third Party Integrator: Error loading metadata with ID: %v",
+			albumObj.MetadataID)
+		return
+	}
+
+	mdOnFileAsObj := new(db.AlbumMetadata)
+	md.ToStruct(mdOnFileAsObj)
+	mMD := mdOnFileAsObj.MusicBrainz
+	dMD := mdOnFileAsObj.Discogs
+
+	if mMD.Release.Title == "" && recv.MBRelease != nil {
+		mMD = buildMBAlbumMetadata(recv.MBRelease)	
+	}
+	if dMD.Title == "" && recv.DiscogsMaster != nil {
+		dMD = buildDiscogsAlbumMetadata(recv.DiscogsMaster)
+	}
+
+	albumMD := db.AlbumMetadata{
+		AlbumName: recv.Album,
+		MusicBrainz: mMD,
+		Discogs: dMD,
+	}
+	writeMetadata(recv.MetadataID, albumMD)
+}
+
+func (i TPIntegrator) createArtistMetadata(recv *recvAlbum) {
+	artistObj := &db.Artist{ID: recv.ArtistID}
+	if err := artistObj.Load(); err != nil {
+		util.Logger.Printf(
+			"FS: Third Party Integrator: Error loading artist with ID: %v",
+			artistObj.ID)
+			return
+	}
+
+	md, err := artistObj.GetMetadataObj()
+	if err != nil {
+		util.Logger.Printf(
+			"FS: Third Party Integrator: Error loading metadata with ID: %v",
+			artistObj.MetadataID)
+			return
+	}
+
+	mdOnFileAsObj := new(db.ArtistMetadata)
+	md.ToStruct(mdOnFileAsObj)
+	mMD := mdOnFileAsObj.MusicBrainz
+	dMD := mdOnFileAsObj.Discogs
+
+	mbArtistLen := len(mMD.Artists)
+	diArtistLen := len(dMD.Artists)
+
+	if mbArtistLen == 0 && recv.MBRelease != nil {
+		mMD = buildMBArtistMetadata(recv.Artist, recv.MBRelease)
+	}
+	if diArtistLen == 0 && recv.DiscogsMaster != nil {
+		discMaster := *recv.DiscogsMaster
+		dMD = buildDiscogsArtistMetadata(discMaster.Artists)
+	}
+
+	artistMD := db.ArtistMetadata{
+		ArtistName: recv.Artist,	
+		MusicBrainz: mMD,
+		Discogs: dMD,
+	}
+	writeMetadata(artistObj.MetadataID, artistMD)
+}
+
+func writeMetadata(metadataID int, md interface{}) {
+	bytes, err := json.MarshalIndent(md, "", "  ")
+	if err != nil {
+		util.Logger.Printf(
+			"FS: Third Party Integrator: Error writing Metadata file: %v", err)
+		return
+	}
+
+	tmp := new(db.Metadata)
+	tmp.ID = metadataID
+	if err := tmp.Load(); err != nil {
+		util.Logger.Printf(
+			"FS: Third Party Integrator: Error loading Metadata object: %v", err)
+		return
+	}
+	if err := ioutil.WriteFile(tmp.Path, bytes, 0644); err != nil {
+		util.Logger.Printf(
+			"FS: Third Party Integrator: Error writing Metadata File: %v", err)
+		return
+	}
 }
 
 func formatOutput(s string, length int) string {

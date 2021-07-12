@@ -4,57 +4,68 @@ import (
 	"fmt"
 
 	"github.com/eHoward1996/aiomst/db"
+	"github.com/eHoward1996/aiomst/util"
 	"github.com/irlndts/go-discogs"
 )
 
+var client discogs.Discogs
 
 func (i TPIntegrator) getDiscogsData(obj interface{}) (discogsResponse, error) {
 	var resp discogsResponse = discogsResponse{}
 	var err error = nil
 
-	if i.discogsClient == nil {
+	if discogsClient == nil {
 		return resp, fmt.Errorf("No Discogs Client available")
 	}
 
-	client := *i.discogsClient
+	client = *discogsClient
 	switch t := obj.(type) {
 	case *sendAlbum:
-		resp.AlbumResponse, err = i.requestDiscogsMaster(client, t)
+		resp.AlbumResponse, err = requestDiscogsMaster(t)
 	}
 
 	return resp, err
 }
 
-func (i TPIntegrator) requestDiscogsMaster(
-	client discogs.Discogs, a *sendAlbum) (*discogs.Master, error) {
-		// Remove any disambiguation/special edition info from the album title
-		// Discogs really doesn't like it.
-		albumTitle := stripAllParentheses(a.Title)
-		request := discogs.SearchRequest{
-			Artist: a.Artist, 
-			ReleaseTitle: albumTitle, 
-			Type: "master",
-			PerPage: 1,
-		}
+func requestDiscogsMaster(a *sendAlbum) (*discogs.Master, error) {
+	// Remove any disambiguation/special edition info from the album title
+	// Discogs really doesn't like it.
+	albumTitle := stripAllParentheses(a.Title)
+	request := discogs.SearchRequest{
+		Artist: a.Artist, 
+		ReleaseTitle: albumTitle, 
+		Type: "master",
+		PerPage: 1,
+	}
 
-		search, err := client.Search(request)
-		if err != nil {
-			e := fmt.Errorf("Error making Discogs Search Request: %v", err)
-			return nil, e
-		}
-		if search != nil && len(search.Results) == 1 {
-			result := search.Results[0]
-			return client.Master(result.MasterID)
-		}
-		
-		return nil, nil
+	search, err := client.Search(request)
+	if err != nil {
+		e := fmt.Errorf("Error making Discogs Search Request: %v", err)
+		return nil, e
+	}
+	if search != nil && len(search.Results) == 1 {
+		result := search.Results[0]
+		return client.Master(result.MasterID)
+	}
+	
+	return nil, nil
+}
+
+func requestDiscogsArtist(artistID int) *discogs.Artist {
+	resp, err := client.Artist(artistID)
+	if err != nil {
+		util.Logger.Printf(
+			"FS: Third Party Integrator: Error retrieving data for artist with ID: " +
+			"%v", artistID)
+	}
+	return resp
 }
 
 func buildDiscogsAlbumMetadata(master *discogs.Master) db.DiscogsMetadata {
 	if master == nil {
 		return db.DiscogsMetadata{}
 	}
-	
+
 	var dmd db.DiscogsMetadata = db.DiscogsMetadata{
 		Styles: master.Styles,
 		Genres: master.Genres,
@@ -138,4 +149,31 @@ func buildDiscogsAlbumMetadata(master *discogs.Master) db.DiscogsMetadata {
 	}
 	dmd.Videos = videos
 	return dmd
+}
+
+func buildDiscogsArtistMetadata(
+	artists []discogs.ArtistSource) db.DiscogsMetadata {
+
+		var dmd db.DiscogsMetadata = db.DiscogsMetadata{}
+		dmd.Artists = make([]db.DiscogsArtist, 0)
+
+		for _, a := range artists {
+			dArtist := requestDiscogsArtist(a.ID)
+			aMD := db.DiscogsArtist{
+				ID: dArtist.ID,
+				Name: dArtist.Name,
+				Realname: dArtist.Realname,
+				ResourceURL: dArtist.ResourceURL,
+				Role: "",
+				Tracks: "",
+				Members: []string{},
+			}
+
+			for _, member := range dArtist.Members {
+				aMD.Members = append(aMD.Members, member.Name)
+			}
+			dmd.Artists = append(dmd.Artists, aMD)
+		}
+
+		return dmd
 }

@@ -1,8 +1,6 @@
 package core
 
 import (
-	"log"
-
 	"github.com/eHoward1996/aiomst/util"
 )
 
@@ -10,7 +8,7 @@ var dbKillChan, fsKillChan chan struct{}
 
 // TaskManager begins AIOMST. It controls all sub-tasks.
 func TaskManager(killChan chan struct{}, exitChan chan int)	{
-	log.Println("TASK MANAGER STARTED")
+	util.Logger.Print("TASK MANAGER STARTED")
 	
 	util.C = util.LoadConfig()
 	config := util.C 
@@ -33,7 +31,7 @@ func watchKillChans(killChan chan struct{}, exitChan chan int)	{
 	for {
 		select {
 		case <- killChan:
-			log.Print("TASK MANAGER: Triggering shutdown")
+			util.Logger.Print("TASK MANAGER: Triggering shutdown")
 
 			fsKillChan <- struct{}{}
 			<- fsKillChan
@@ -43,7 +41,7 @@ func watchKillChans(killChan chan struct{}, exitChan chan int)	{
 			<- dbKillChan
 			close(dbKillChan)
 
-			log.Print("TASK MANAGER STOPPED")
+			util.Logger.Print("TASK MANAGER STOPPED")
 			exitChan <- 0
 		}
 	}

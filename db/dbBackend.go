@@ -1,7 +1,6 @@
 package db
 
 import (
-	"log"
 	"os"
 	"path"
 
@@ -42,7 +41,7 @@ func (s *SqlBackend) Setup()	error {
 	}
 
 	// Create a new DB file
-	log.Print("DB: Creating new DB file: ", s.Path)
+	util.Logger.Print("DB: Creating new DB file: ", s.Path)
 	dir := path.Dir(s.Path) + "/"
 	file := path.Base(s.Path)
 
@@ -63,7 +62,7 @@ func (s *SqlBackend) Setup()	error {
 		panic(err)
 	}
 
-	log.Print("DB: Setup: Executing Init Schema")
+	util.Logger.Print("DB: Setup: Executing Init Schema")
 	database.MustExec(initSchema)
 
 	// Close file

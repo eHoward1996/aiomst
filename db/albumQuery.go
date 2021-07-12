@@ -290,5 +290,6 @@ func (s *SqlBackend) AlbumsWithErroredThirdPartyId() ([]Album, error) {
 			FROM albums
 			GROUP BY albums.discogs_id
 			HAVING COUNT (*) > 1
-		);`)
+		)
+		ORDER BY artist;`)
 }

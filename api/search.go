@@ -1,10 +1,10 @@
 package api
 
 import (
-	"log"
 	"strings"
 
 	"github.com/eHoward1996/aiomst/db"
+	"github.com/eHoward1996/aiomst/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -41,7 +41,7 @@ func GetSearch(c *gin.Context)	{
 		case "artists":
 			artists, err := db.DB.SearchArtists(query)
 			if err != nil {
-				log.Print(err)
+				util.Logger.Print(err)
 				c.IndentedJSON(500, serverErr)
 				return
 			}
@@ -49,7 +49,7 @@ func GetSearch(c *gin.Context)	{
 		case "albums":
 			albums, err := db.DB.SearchAlbums(query)
 			if err != nil {
-				log.Print(err)
+				util.Logger.Print(err)
 				c.IndentedJSON(500, serverErr)
 				return
 			}
@@ -57,7 +57,7 @@ func GetSearch(c *gin.Context)	{
 		case "songs":
 			songs, err := db.DB.SearchSongs(query)
 			if err != nil {
-				log.Print(err)
+				util.Logger.Print(err)
 				c.IndentedJSON(500, serverErr)
 				return
 			}
@@ -65,7 +65,7 @@ func GetSearch(c *gin.Context)	{
 		// case "folders":
 		// 	folders, err := db.DB.SearchFolders(query)
 		// 	if err != nil {
-		// 		log.Print(err)
+		// 		util.Logger.Print(err)
 		// 		c.IndentedJSON(500, serverErr)
 		// 		return
 		// 	}

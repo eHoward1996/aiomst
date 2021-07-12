@@ -35,7 +35,8 @@ func (m *Metadata) ReadMetadata() ([]byte, error) {
 	return ioutil.ReadFile(m.Path)	
 } 
 
-
+// ToStruct takes in a pointer to either ArtistMetadata or AlbumMetadata
+// objects and attempts to unmarshal json into the object passed.
 func (m *Metadata) ToStruct(t interface{}) error {
 	mdBytes, e := m.ReadMetadata()
 	if e != nil {
@@ -43,9 +44,7 @@ func (m *Metadata) ToStruct(t interface{}) error {
 	}
 
 	switch t.(type) {
-	case *ArtistMetadata:
-		return json.Unmarshal(mdBytes, t)
-	case *AlbumMetadata:
+	case *ArtistMetadata, *AlbumMetadata:
 		return json.Unmarshal(mdBytes, t)
 	default:
 		return fmt.Errorf("Unknown Object: %T", t)

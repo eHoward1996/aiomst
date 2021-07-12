@@ -3,10 +3,10 @@ package api
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/eHoward1996/aiomst/db"
+	"github.com/eHoward1996/aiomst/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -32,7 +32,7 @@ func GetArtist(c *gin.Context)	{
 func handleArtistID(sID string, c *gin.Context)	{
 	id, err := strconv.Atoi(sID)
 	if err != nil {
-		log.Print(err)
+		util.Logger.Print(err)
 		c.JSON(400, "Invalid integer artist ID")
 		return
 	}
@@ -44,7 +44,7 @@ func handleArtistID(sID string, c *gin.Context)	{
 			return
 		}
 
-		log.Print(err)
+		util.Logger.Print(err)
 		c.JSON(500, serverErr)
 		return
 	}
@@ -54,7 +54,7 @@ func handleArtistID(sID string, c *gin.Context)	{
 
 	albums, err := db.DB.AlbumsForArtist(artist.ID)
 	if err != nil {
-		log.Print(err)
+		util.Logger.Print(err)
 		c.IndentedJSON(500, serverErr)
 		return
 	}
@@ -62,7 +62,7 @@ func handleArtistID(sID string, c *gin.Context)	{
 	
 	songs, err := db.DB.SongsForArtist(artist.ID)
 	if err != nil {
-		log.Print(err)
+		util.Logger.Print(err)
 		c.JSON(200, ErrGeneric)
 		return
 	}
@@ -81,7 +81,7 @@ func handleArtistNoID(c *gin.Context)	{
 
 		artists, err := db.DB.LimitArtists(offset, count)
 		if err != nil {
-			log.Println(err)
+			util.Logger.Print(err)
 			c.IndentedJSON(500, serverErr)
 			return
 		}
@@ -92,7 +92,7 @@ func handleArtistNoID(c *gin.Context)	{
 
 	artists, err := db.DB.AllArtistsByTitle()
 	if err != nil {
-		log.Print(err)
+		util.Logger.Print(err)
 		c.JSON(500, ErrGeneric)
 		return
 	}

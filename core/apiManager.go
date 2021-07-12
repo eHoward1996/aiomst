@@ -15,7 +15,7 @@ import (
 )
 
 func apiManager(apikillChan chan struct{})	{
-	log.Print("API MANAGER STARTED")
+	util.Logger.Print("API MANAGER STARTED")
 	gracefulChan := make(chan struct{}, 0)
 
 	gin.SetMode(gin.ReleaseMode)
@@ -78,7 +78,7 @@ func watchKillSig(apiKillChan chan struct{})	{
 		// Stop API
 		case <-apiKillChan:
 			// Inform manager that shutdown is complete
-			log.Println("API MANAGER STOPPED")
+			util.Logger.Print("API MANAGER STOPPED")
 			apiKillChan <- struct{}{}
 			return
 		}

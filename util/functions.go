@@ -2,6 +2,7 @@ package util
 
 import (
 	"log"
+	"os"
 	"strings"
 	"time"
 	"unicode"
@@ -9,6 +10,8 @@ import (
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
 )
+
+var Logger *log.Logger
 
 // ExpandHomeDir replaces input tilde characters with the absolute path to the current
 // user's home directory.
@@ -31,9 +34,14 @@ func NormalizeString(s string) string 	{
 	t := transform.Chain(norm.NFD, transform.RemoveFunc(isMn), norm.NFC)
 	result, _, err := transform.String(t, s)
 	if err != nil {
-		log.Printf("DB: Normalize String: %s with value %s", err, s)
+		Logger.Printf("DB: Normalize String: %s with value %s", err, s)
 		return s
 	}
 
 	return result
+}
+
+func InitializeLogger() {
+	Logger = log.Default()
+	Logger.SetOutput(os.Stdout)
 }

@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"strconv"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/eHoward1996/aiomst/db"
+	"github.com/eHoward1996/aiomst/util"
 
 	"github.com/karrick/godirwalk"
 )
@@ -100,13 +100,13 @@ func (fs *MediaScan) Scan(
 		albumCache  = map[string]*db.Album{}
 		
 		if fs.verbose	{
-			log.Printf("FS: Scanning: %s", baseFolder)
+			util.Logger.Printf("FS: Scanning: %s", baseFolder)
 		}
 
 		godirwalk.Walk(baseFolder, &godirwalk.Options{
 			Callback: func(osPathname string, de *godirwalk.Dirent) error	{
 				info := de.ModeType()
-				log.Printf("FS: Media Scan: Got new file: %s", osPathname)
+				util.Logger.Printf("FS: Media Scan: Got new file: %s", osPathname)
 				
 				folder, err := handleFolder(osPathname, info)
 				if err != nil {
@@ -160,7 +160,7 @@ func (fs *MediaScan) Scan(
 				return nil
 			},
 			ErrorCallback: func(osPathname string, err error) godirwalk.ErrorAction {
-				log.Printf("%s", err)
+				util.Logger.Printf("%s", err)
 				return godirwalk.SkipNode
 			},
 			Unsorted: true,
@@ -168,13 +168,13 @@ func (fs *MediaScan) Scan(
 		
 		joinAttachables()
 		if err := db.DB.TruncateLog(); err != nil {
-			log.Printf("FS: Media Scan: Could not truncate WAL File: %v", err)
+			util.Logger.Printf("FS: Media Scan: Could not truncate WAL File: %v", err)
 		}
 
 		if fs.verbose {
-			log.Printf(
+			util.Logger.Printf(
 				"FS: Media Scan Complete [time: %s]", time.Since(startTime).String())
-			log.Printf(
+			util.Logger.Printf(
 				"FS: Media Scan: Added: " +
 				"[art: %d] [artists: %d] [albums: %d] [songs: %d] " + 
 				"[folders: %d] [metadata: %d]",
@@ -182,7 +182,7 @@ func (fs *MediaScan) Scan(
 				songCount, folderCount, metadataCount,
 			)
 			
-			log.Printf("FS: Updated: [songs: %d]", songUpdate)
+			util.Logger.Printf("FS: Updated: [songs: %d]", songUpdate)
 		}
 
 		sum := artCount + artistCount + albumCount + songCount + folderCount
@@ -211,9 +211,9 @@ func handleFolder(cPath string, info os.FileMode)	(*db.Folder, error) {
 	if err == sql.ErrNoRows  {
 		if _, err := os.Stat(path.Join(cPath, metadataFile)); os.IsNotExist(err) {
 			if _, err := os.Create(path.Join(cPath, metadataFile)); err != nil {
-				log.Printf("FS: Media Scan: Error creating Metadata file: %v", err)
+				util.Logger.Printf("FS: Media Scan: Error creating Metadata file: %v", err)
 			} else {
-				log.Printf(
+				util.Logger.Printf(
 					"FS: Media Scan: Handle Folder: Created new Metadata File at: %#v",
 					path.Join(cPath, metadataFile))
 			}
@@ -227,7 +227,7 @@ func handleFolder(cPath string, info os.FileMode)	(*db.Folder, error) {
 				"FS: Media Scan: Found no files in folder: %v", folder.Path)
 		}
 
-		log.Printf("FS: Media Scan: Found %v files in %v", len(files), cPath)
+		util.Logger.Printf("FS: Media Scan: Found %v files in %v", len(files), cPath)
 		folder.Title = path.Base(folder.Path)
 		parent := new(db.Folder)
 		if info.IsDir() {
@@ -375,7 +375,7 @@ func handleArtist(song *db.Song) (*db.Artist, error) {
 			artist.FolderID = f.ParentID
 		}
 		artist.MBID = errStartValue
-		artist.DiscogsID = -1
+		artist.DiscogsID = errStartValue
 		artist.MetadataID = 0
 		if err := artist.Save(); err != nil {
 			return nil, fmt.Errorf(
@@ -384,7 +384,7 @@ func handleArtist(song *db.Song) (*db.Artist, error) {
 
 		artistCount++
 		artistCache[artist.Title] = artist
-		log.Printf("FS: Media Scan: Artist: [#%05d] %s", artist.ID, artist.Title)		
+		util.Logger.Printf("FS: Media Scan: Artist: [#%05d] %s", artist.ID, artist.Title)		
 		return artist, nil
 	}	
 	
@@ -418,7 +418,7 @@ func handleAlbum(song *db.Song) (*db.Album, error) {
 		
 		albumCount++
 		albumCache[albumCacheKey] = album
-		log.Printf(
+		util.Logger.Printf(
 			"FS: Media Scan: Album: [#%05d] %s - %d - %s",
 			album.ID, album.Artist, album.Year, album.Title)
 		return album, nil
@@ -466,7 +466,7 @@ func checkForModification(origin *db.Song) error	{
 func joinAttachables() {
 	for k, v := range fIDHasAttachables {
 		if _, ok := folderAttachables[k]; !ok {
-			log.Printf("FS: Media Scan: No attachables for Folder ID: %v", k)
+			util.Logger.Printf("FS: Media Scan: No attachables for Folder ID: %v", k)
 			continue
 		}
 
@@ -482,7 +482,7 @@ func joinAttachables() {
 				artist.ArtID = art.ID
 			}
 			if err := artist.Update(); err != nil {
-				log.Printf(
+				util.Logger.Printf(
 					"FS: Media Scan: Error updating Artist %v: %v", artist.Title, err)
 			}
 		case *db.Album:	
@@ -496,12 +496,12 @@ func joinAttachables() {
 				album.ArtID = art.ID
 			}
 			if err := album.Update(); err != nil {
-				log.Printf(
+				util.Logger.Printf(
 					"FS: Media Scan: Error updating Album %v - %v: %v", 
 					album.Artist, album.Title, err)
 			}
 		default:
-			log.Printf(
+			util.Logger.Printf(
 				"FS: Media Scan: Unable to attach objects to unknown Type: %T", v)
 		}
 	}

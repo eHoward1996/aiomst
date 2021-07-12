@@ -2,13 +2,13 @@ package integrated
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/eHoward1996/aiomst/db"
+	"github.com/eHoward1996/aiomst/util"
 
 	"github.com/gammazero/workerpool"
 	"github.com/pascoej/gomusicbrainz"
@@ -22,103 +22,99 @@ func (i TPIntegrator) getMusicBrainzData(
 		var resp musicbrainzResponse = musicbrainzResponse{}
 		var err error = nil
 
-		if i.mbClient == nil {
+		if mbClient == nil {
 			return resp, fmt.Errorf("No MusicBrainz Client available")
 		}
 
 		switch t := obj.(type) {
 		case *sendAlbum:
-			resp.AlbumResponse, err = i.findClosestAlbum(t)
-		default:
-			log.Print("STOPSTOPSTOPSTOPSTOPSTOPSTOPSTOPSTOPSTOPSTOP")
+			resp.AlbumResponse, err = findClosestAlbum(t)
+		// case gomusicbrainz.MBID:
+		// 	resp.ArtistResponse, err = mbLookupArtist(fmt.Sprintf("%v", obj))
 		}	
 
 		return resp, err
 }
 
-func (i TPIntegrator) findClosestAlbum(
-	album *sendAlbum) (*gomusicbrainz.Release, error) {
-		
-		releaseList, err := i.getReleaseList(album)
-		if err != nil {
-			return nil, err
-		}
-		
-		type result struct {
-			release *gomusicbrainz.Release
-			score int
-		}
+func findClosestAlbum(album *sendAlbum) (*gomusicbrainz.Release, error) {
+	releaseList, err := getReleaseList(album)
+	if err != nil {
+		return nil, err
+	}
+	
+	type result struct {
+		release *gomusicbrainz.Release
+		score int
+	}
 
-		wp := workerpool.New(maxWorkers)
-		max := &result{score: -1}
-		resultCh := make(chan *result, len(releaseList))		
-		for _, release := range releaseList {
-			release := release
-			wp.Submit(func() {
-				score := scoreAlbum(album, release)
-				r := new(result)
-				r.score = score
-				r.release = release
-				resultCh <- r
-			})
-		}
-		
-		go func() {
-			wp.StopWait()
-			close(resultCh)
-		}()
+	wp := workerpool.New(maxWorkers)
+	max := &result{score: -1}
+	resultCh := make(chan *result, len(releaseList))		
+	for _, release := range releaseList {
+		release := release
+		wp.Submit(func() {
+			score := scoreAlbum(album, release)
+			r := new(result)
+			r.score = score
+			r.release = release
+			resultCh <- r
+		})
+	}
+	
+	go func() {
+		wp.StopWait()
+		close(resultCh)
+	}()
 
-		for r := range resultCh {
-			if r.score > max.score {
-				max = r
-			}
+	for r := range resultCh {
+		if r.score > max.score {
+			max = r
 		}
+	}
 
-		if max.score <= 0 {
-			return nil, fmt.Errorf("MusicBrainz: Scores were at or below 0")
-		}
+	if max.score <= 0 {
+		return nil, fmt.Errorf("MusicBrainz: Scores were at or below 0")
+	}
 
-		return max.release, nil
+	return max.release, nil
 }
 
-func (i TPIntegrator) getReleaseList(
-	a *sendAlbum) ([]*gomusicbrainz.Release, error) {
-		
-		title := stripAllParentheses(a.Title)
-		q := fmt.Sprintf(`releasegroupaccent:"%s" OR release:"%s" OR artist:"%s"`,
-			title, a.Title, a.Artist)
+func getReleaseList(a *sendAlbum) ([]*gomusicbrainz.Release, error) {
+	title := stripAllParentheses(a.Title)
+	q := fmt.Sprintf(`releasegroupaccent:"%s" OR release:"%s" OR artist:"%s"`,
+		title, a.Title, a.Artist)
 
-		resp, err := repeatRequest(func() (interface{}, error) {
-			r, err := i.mbClient.SearchReleaseGroup(q, mbLimit, mbOffset)
-			if r != nil {
-				return r.ReleaseGroups, err
-			}
-			return nil, err
-		})
-		if err != nil {
-			return nil, err
+	resp, err := repeatRequest(func() (interface{}, error) {
+		r, err := mbClient.SearchReleaseGroup(q, mbLimit, mbOffset)
+		if r != nil {
+			return r.ReleaseGroups, err
 		}
+		return nil, err
+	})
+	if err != nil {
+		return nil, err
+	}
 
-		var releases []*gomusicbrainz.Release = make([]*gomusicbrainz.Release, 0)
-		rg := resp.([]*gomusicbrainz.ReleaseGroup)
-		for _, group := range rg {
-			for _, release := range group.Releases.Releases {
-				if !isSimilarString(a.Title, release.Title) {
-					continue
-				}
-
-				rel, err := repeatRequest(func() (interface{}, error) {
-					return i.mbClient.LookupRelease(
-						release.ID,
-						[]string{"recordings", "artists", "release-groups", "url-rels"}...)
-				})
-				if err != nil {
-					return nil, err
-				}
-				releases = append(releases, rel.(*gomusicbrainz.Release))
+	var releases []*gomusicbrainz.Release = make([]*gomusicbrainz.Release, 0)
+	rg := resp.([]*gomusicbrainz.ReleaseGroup)
+	for _, group := range rg {
+		for _, release := range group.Releases.Releases {
+			if !isSimilarString(a.Title, release.Title) {
+				continue
 			}
+
+			rel, err := repeatRequest(func() (interface{}, error) {
+				return mbClient.LookupRelease(
+					release.ID,
+					[]string{"recordings", "artists", "release-groups", "url-rels"}...)
+			})
+			if err != nil {
+				return nil, err
+			}
+			releases = append(releases, rel.(*gomusicbrainz.Release))
 		}
-		return releases, nil
+	}
+	return releases, nil
 }
 
 func scoreAlbum(a *sendAlbum, mbRelease *gomusicbrainz.Release) int {
@@ -358,4 +354,112 @@ func buildMBAlbumMetadata(rel *gomusicbrainz.Release) db.MusicBrainzMetadata {
 	}
 	mbmd.RelatedUrls = urls
 	return mbmd
+}
+
+func buildMBArtistMetadata(
+	rArtist string, rel *gomusicbrainz.Release) db.MusicBrainzMetadata {
+
+		var mbmd db.MusicBrainzMetadata = db.MusicBrainzMetadata{}
+		mbmd.Artists = make([]db.MusicBrainzArtist, 0)
+		mbmd.AssociatedActs = make([]db.AssociatedAct, 0)
+		mbmd.RelatedUrls = make([]db.RelatedUrl, 0)
+		mbmd.ReleaseGroups = make([]db.MusicBrainzReleaseGroup, 0)
+		mbmd.RelatedTags = make([]string, 0)
+		tagMap := make(map[string]struct{})
+
+		for _, artist := range rel.ArtistCredit.NameCredits {
+			if strings.Contains(rArtist, artist.Artist.Name) {
+				if artistData := mbLookupArtist(artist.Artist.ID); artistData != nil {
+					aData := db.MusicBrainzArtist{
+						ID: string(artistData.ID),
+						Name: artistData.Name,
+						Disambiguation: artistData.Disambiguation,
+						SortName: artistData.SortName,
+						Type: artistData.Type,
+						Aliases: []db.MusicBrainzAlias{},
+						Area: artistData.Area.Name,
+						Country: artistData.CountryCode,
+					}
+					for _, val := range artistData.Aliases {
+						aData.Aliases = append(aData.Aliases, db.MusicBrainzAlias{
+							Name: val.Name,
+							Type: val.Type,
+						})
+					}
+					mbmd.Artists = append(mbmd.Artists, aData)
+
+					if artistData.Relations["artist"] != nil {
+						for _, val := range artistData.Relations["artist"] {
+							aRel := val.(*gomusicbrainz.ArtistRelation).Artist
+							associated := db.AssociatedAct{
+								ID: string(aRel.ID),
+								Name: aRel.Name,
+								Disambiguation: aRel.Disambiguation,
+								Type: aRel.Type,
+								Relation: val.(*gomusicbrainz.ArtistRelation).Type,
+							}
+							mbmd.AssociatedActs = append(mbmd.AssociatedActs, associated)
+						}
+					}
+					
+					if artistData.Relations["url"] != nil {
+						for _, val := range artistData.Relations["url"] {
+							urlRel := val.(*gomusicbrainz.URLRelation).RelationAbstract
+							mbmd.RelatedUrls = append(mbmd.RelatedUrls, db.RelatedUrl{
+								Type: urlRel.Type,
+								Url: urlRel.Target,
+							})
+						}
+					}
+					 
+					if artistData.ReleaseGroups != nil {
+						relGroups := *artistData.ReleaseGroups
+						for _, rg := range relGroups.ReleaseGroups {
+							rCount := 0
+							if rg.Releases != nil {
+								rCount = rg.Releases.Count
+							}
+							
+							mbmd.ReleaseGroups = append(
+								mbmd.ReleaseGroups,
+								db.MusicBrainzReleaseGroup{
+									ID: string(rg.ID),
+									Title: rg.Title,
+									Type: rg.Type,
+									ReleaseCount: rCount,
+									ReleaseDate: rg.FirstReleaseDate.Time,
+								},
+							)
+						}
+					}
+
+					for _, tag := range artistData.Tags {
+						tagMap[tag.Name] = struct{}{}
+					}
+				}
+			}
+		}
+
+		for k := range tagMap {
+			mbmd.RelatedTags = append(mbmd.RelatedTags, k)
+		}
+		return mbmd
+}
+
+func mbLookupArtist(mbid gomusicbrainz.MBID) *gomusicbrainz.Artist {
+	resp, err := repeatRequest(func() (interface{}, error) {
+		return mbClient.LookupArtist(mbid,
+			[]string{
+				"genres", "tags", "aliases", 
+				"release-groups", "artist-rels", "url-rels",
+			}...)
+	})
+
+	if err != nil {
+		util.Logger.Printf(
+			"FS: Third Party Integrator: Errored finding MusicBrainz Artist given " +
+			"MBID: %v", mbid)
+		return nil
+	}
+	return resp.(*gomusicbrainz.Artist)
 }

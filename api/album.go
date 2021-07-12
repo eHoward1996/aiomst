@@ -1,10 +1,10 @@
 package api
 
 import (
-	"log"
 	"strconv"
 
 	"github.com/eHoward1996/aiomst/db"
+	"github.com/eHoward1996/aiomst/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -32,14 +32,14 @@ func GetAlbums(c *gin.Context)	{
 func handleAlbumID(sID string, c *gin.Context)	{
 	id, err := strconv.Atoi(sID)
 	if err != nil {
-		log.Print(err)
+		util.Logger.Print(err)
 		c.JSON(200, ErrGeneric)
 		return
 	}
 
 	album := db.Album{ID: id}
 	if err := album.Load(); err != nil {
-		log.Print(err)
+		util.Logger.Print(err)
 		c.JSON(500, ErrGeneric)
 		return
 	}
@@ -49,7 +49,7 @@ func handleAlbumID(sID string, c *gin.Context)	{
 
 	songs, err := db.DB.SongsForAlbum(album.ID)
 	if err != nil {
-		log.Print(err)
+		util.Logger.Print(err)
 		c.JSON(200, ErrGeneric)
 		return
 	}
@@ -62,7 +62,7 @@ func handleAlbumID(sID string, c *gin.Context)	{
 func handleAlbumNoID(c *gin.Context)	{
 	albums, err := db.DB.AllAlbumsByTitle()
 	if err != nil {
-		log.Print(err)
+		util.Logger.Print(err)
 		c.JSON(500, ErrGeneric)
 		return
 	}

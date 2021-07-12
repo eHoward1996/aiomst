@@ -3,10 +3,10 @@ package api
 import (
 	"database/sql"
 	"io"
-	"log"
 	"strconv"
 
 	"github.com/eHoward1996/aiomst/db"
+	"github.com/eHoward1996/aiomst/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,7 +19,7 @@ func GetStream(c *gin.Context) {
 	// Attempt to load the song with matching ID
 	id, err := strconv.Atoi(c.Query("id"))
 	if err != nil {
-		log.Print(err)
+		util.Logger.Print(err)
 		c.JSON(400, ErrGeneric)
 		return
 	}
@@ -33,21 +33,21 @@ func GetStream(c *gin.Context) {
 		}
 
 		// All other errors
-		log.Println(err)
+		util.Logger.Print(err)
 		c.JSON(500, serverErr)
 		return
 	}
 
 	stream, err := song.Stream()
 	if err != nil {
-		log.Println(err)
+		util.Logger.Print(err)
 		c.JSON(500, serverErr)
 		return
 	}
 
 	rs, ok := toReadSeeker(stream)
 	if !ok {
-		log.Println("Unable to create readSeeker")
+		util.Logger.Print("Unable to create readSeeker")
 		c.JSON(500, serverErr)
 		return
 	}

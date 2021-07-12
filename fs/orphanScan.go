@@ -2,12 +2,12 @@ package fs
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/eHoward1996/aiomst/db"
+	"github.com/eHoward1996/aiomst/util"
 )
 
 // OrphanScan is a filesystem task that scans the given path for orphaned media
@@ -62,13 +62,13 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 	// Check if a baseFolder is set, meaning remove ANYTHING not under this base
 	if baseFolder != "" {
 		if fs.verbose {
-			log.Println("FS: Orphan Scan: Base Folder:", baseFolder)
+			util.Logger.Print("FS: Orphan Scan: Base Folder:", baseFolder)
 		}
 
 		// Scan for all art NOT under the base folder
 		art, err := db.DB.ArtNotInPath(baseFolder)
 		if err != nil {
-			log.Println(err)
+			util.Logger.Print(err)
 			return 0, err
 		}
 
@@ -77,17 +77,17 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 			// Remove art from database
 			filename := a.Path
 			if err := a.Delete(); err != nil {
-				log.Println(err)
+				util.Logger.Print(err)
 				return 0, err
 			}
-			log.Printf("FS: Orphan Scan: Removed File: %v", filename)
+			util.Logger.Printf("FS: Orphan Scan: Removed File: %v", filename)
 			artCount++
 		}
 
 		// Scan for all songs NOT under the base folder
 		songs, err := db.DB.SongsNotInPath(baseFolder)
 		if err != nil {
-			log.Println(err)
+			util.Logger.Print(err)
 			return 0, err
 		}
 
@@ -96,17 +96,17 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 			// Remove song from database
 			filename := s.Path
 			if err := s.Delete(); err != nil {
-				log.Println(err)
+				util.Logger.Print(err)
 				return 0, err
 			}
-			log.Printf("FS: Orphan Scan: Removed File: %v", filename)
+			util.Logger.Printf("FS: Orphan Scan: Removed File: %v", filename)
 			songCount++
 		}
 
 		// Scan for all folders NOT under the base folder
 		folders, err := db.DB.FoldersNotInPath(baseFolder)
 		if err != nil {
-			log.Println(err)
+			util.Logger.Print(err)
 			return 0, err
 		}
 
@@ -115,10 +115,10 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 			// Remove folder from database
 			path := f.Path
 			if err := f.Delete(); err != nil {
-				log.Println(err)
+				util.Logger.Print(err)
 				return 0, err
 			}
-			log.Printf("FS: Orphan Scan: Removed Path: %v", path)
+			util.Logger.Printf("FS: Orphan Scan: Removed Path: %v", path)
 			folderCount++
 		}
 	}
@@ -129,15 +129,15 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 	}
 
 	if fs.verbose {
-		log.Println("FS: Orphan Scanning: Scanning subfolder: ", subFolder)
+		util.Logger.Printf("FS: Orphan Scanning: Scanning subfolder: %v", subFolder)
 	} else {
-		log.Println("FS: Orphan Scan: Removing: ", subFolder)
+		util.Logger.Printf("FS: Orphan Scan: Removing: %v", subFolder)
 	}
 
 	// Scan for all art in subfolder
 	art, err := db.DB.ArtInPath(subFolder)
 	if err != nil {
-		log.Println(err)
+		util.Logger.Print(err)
 		return 0, err
 	}
 
@@ -148,10 +148,10 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 			// Remove art from database
 			filename := a.Path
 			if err := a.Delete(); err != nil {
-				log.Println(err)
+				util.Logger.Print(err)
 				return 0, err
 			}
-			log.Printf("FS: Orphan Scan: File Does Not Exist: %v", filename)
+			util.Logger.Printf("FS: Orphan Scan: File Does Not Exist: %v", filename)
 			artCount++
 		}
 	}
@@ -159,7 +159,7 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 	// Scan for all songs in subfolder
 	songs, err := db.DB.SongsInPath(subFolder)
 	if err != nil {
-		log.Println(err)
+		util.Logger.Print(err)
 		return 0, err
 	}
 
@@ -170,10 +170,10 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 			// Remove song from database
 			filename := s.Path
 			if err := s.Delete(); err != nil {
-				log.Println(err)
+				util.Logger.Print(err)
 				return 0, err
 			}
-			log.Printf("FS: Orphan Scan: File Does Not Exist: %v", filename)
+			util.Logger.Printf("FS: Orphan Scan: File Does Not Exist: %v", filename)
 			songCount++
 		}
 	}
@@ -189,7 +189,7 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 		// Check that the folder still has items within it
 		files, err := ioutil.ReadDir(f.Path)
 		if err != nil && !os.IsNotExist(err) {
-			log.Println(err)
+			util.Logger.Print(err)
 			return 0, err
 		}
 
@@ -197,10 +197,10 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 		if len(files) == 0 {
 			path := f.Path
 			if err := f.Delete(); err != nil {
-				log.Println(err)
+				util.Logger.Print(err)
 				return 0, err
 			}
-			log.Printf("FS: Orphan Scan: Folder Has No Items: %v", path)
+			util.Logger.Printf("FS: Orphan Scan: Folder Has No Items: %v", path)
 			folderCount++
 		}
 	}
@@ -208,21 +208,21 @@ func (fs *OrphanScan) Scan(baseFolder, subFolder string, orphanCancelChan chan s
 	// Now that songs have been purged, check for albums
 	albumCount, err := db.DB.PurgeOrphanAlbums()
 	if err != nil {
-		log.Println(err)
+		util.Logger.Print(err)
 		return 0, err
 	}
 
 	// Check for artists
 	artistCount, err := db.DB.PurgeOrphanArtists()
 	if err != nil {
-		log.Println(err)
+		util.Logger.Print(err)
 		return 0, err
 	}
 
 	// Print metrics
 	if fs.verbose {
-		log.Printf("FS: Orphan Scan: Complete [time: %s]", time.Since(startTime).String())
-		log.Printf("FS: Orphan Scan: Removed: [art: %d] [artists: %d] [albums: %d] [songs: %d] [folders: %d]",
+		util.Logger.Printf("FS: Orphan Scan: Complete [time: %s]", time.Since(startTime).String())
+		util.Logger.Printf("FS: Orphan Scan: Removed: [art: %d] [artists: %d] [albums: %d] [songs: %d] [folders: %d]",
 			artCount, artistCount, albumCount, songCount, folderCount)
 	}
 

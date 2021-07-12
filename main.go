@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,10 +10,11 @@ import (
 )
 
 func main()	{
-	log.Print("AIOMST: Starting")
+	util.InitializeLogger()
+	util.Logger.Print("AIOMST: Starting")
 
 	stat := util.ServerStatus()
-	log.Printf(`AIOMST: Initial Server Status:
+	util.Logger.Printf(`AIOMST: Initial Server Status:
 				  -- Hostname: %s
 				  -- Platform: %s
 				  -- Architecture: %s
@@ -35,13 +35,13 @@ func main()	{
 
 	go func()	{
 		for sig := range sigChan {
-			log.Printf("AIOMST caught signal: %v... force halting", sig)
+			util.Logger.Printf("AIOMST caught signal: %v... force halting", sig)
 			killChan <- struct{}{}
 			os.Exit(1)
 		}
 	}()
 	
 	code := <-exitChan
-	log.Println("AIOMST GRACEFUL SHUTDOWN")
+	util.Logger.Print("AIOMST GRACEFUL SHUTDOWN")
 	os.Exit(code)
 }

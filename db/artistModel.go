@@ -1,8 +1,6 @@
 package db
 
 import (
-	"fmt"
-
 	"github.com/eHoward1996/aiomst/util"
 )
 
@@ -10,7 +8,7 @@ import (
 type Artist struct {
 	ID    		      int    	`json:"id"`
 	MBID						string  `db:"mb_id" json:"mbId"`
-	DiscogsID       int     `db:"discogs_id" json:"discogsId"`
+	DiscogsID       string  `db:"discogs_id" json:"discogsId"`
 	MetadataID      int     `db:"metadata_id" json:"metadataId"`
 	ArtID  		      int 		`db:"art_id" json:"artId"` 
 	FolderID 	      int 		`db:"folder_id" json:"folderId"`
@@ -30,8 +28,7 @@ func GetArtistFromSong(song *Song) *Artist {
 
 // GetArt returns an Art object based on the ArtID from this struct
 func (a *Artist) GetArt() (*Art, error) {
-	art := new(Art)
-	art.ID = a.ArtID
+	art := &Art{ID: a.ArtID}
 	if err := art.Load(); err != nil {
 		return nil, err
 	}
@@ -41,8 +38,7 @@ func (a *Artist) GetArt() (*Art, error) {
 // GetMetadataObj returns a Metadata object based on the MetadataID from this
 // struct
 func (a *Artist) GetMetadataObj() (*Metadata, error) {
-	md := new(Metadata)
-	md.ID = a.MetadataID
+	md := &Metadata{ID: a.MetadataID}
 	if err := md.Load(); err != nil {
 		return nil, err
 	}
@@ -78,5 +74,5 @@ func (a *Artist) HasAttachables() {}
 // String is a method that returns a string with simple information about this
 // object.
 func (a Artist) String() string {
-	return fmt.Sprintf("%s", a.Title)	
+	return a.Title
 }

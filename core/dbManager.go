@@ -9,7 +9,7 @@ import (
 )
 
 func dbManager(conf util.Config, dbLaunchChan, dbKillChan chan struct{})	{
-	log.Print("DB MANAGER STARTED")
+	util.Logger.Print("DB MANAGER STARTED")
 
 	if conf.Sqlite == nil {
 		log.Fatalf("DB: Invalid database file")
@@ -17,7 +17,7 @@ func dbManager(conf util.Config, dbLaunchChan, dbKillChan chan struct{})	{
 
 	path := conf.SqlFilePath()
 	db.DB.DSN(path)
-	log.Println("DB: SQLite:", db.DB.Path)
+	util.Logger.Print("DB: SQLite:", db.DB.Path)
 
 	// Setup the db
 	if err := db.DB.Setup(); err != nil 	{
@@ -50,7 +50,7 @@ func dbWatchKillSig(dbKillChan chan struct{})	{
 			}
 
 			// Inform manager that shutdown is complete
-			log.Println("DB: Stopped!")
+			util.Logger.Print("DB: Stopped!")
 			dbKillChan <- struct{}{}
 			return
 		}
