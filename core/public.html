@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.0/howler.min.js"></script>
+    <script>
+      var sound = null,
+          howler_id = null
+
+      function formatTime(secs) {
+        var minutes = Math.floor(secs / 60) || 0;
+        var seconds = Math.floor(secs - minutes * 60) || 0;
+    
+        return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+      }          
+
+      window.onload = function() {
+        sound = new Howl({
+          autoplay: false,
+          src: "http://localhost:8090/stream?id=200",
+          html5: true,
+          volume: 1.0,
+          onplay: function() {
+            document.getElementById('duration').innerHTML = formatTime(sound.duration(howler_id));
+            document.getElementById('toggle').value = 'Pause'
+          },
+          onpause: function() {
+            document.getElementById('toggle').value = 'Play'
+          }
+        })
+
+        howler_id = sound.play()
+        setInterval(() => {
+          if (sound.playing(howler_id)) {
+            document.getElementById('current').innerHTML = formatTime(sound.seek(null, howler_id));
+          }
+        }, 200)
+      }
+      
+      function doStuff() {
+        console.log(howler_id)
+        if (sound.playing(howler_id)) {
+          sound.pause(howler_id)
+        } else {
+          console.log('playing')
+          sound.play(howler_id);
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <input type="button" onclick="doStuff()" value="Play" id="toggle"><br><br>
+    <div id="current">00:00</div>
+    <div id="duration">00:00</div>
+  </body>
+</html>
+<!-- <script>
+  var AudioContext = AudioContext || webkitAudioContext,
+      context = new AudioContext(),
+      song = null,
+      clicks = 0;
+
+  window.onload = reqSong()
+  function reqSong() {
+    var request = new XMLHttpRequest();
+    request.open('GET', "http://localhost:8080/stream", true);
+    request.responseType = 'arraybuffer';
+    
+    request.onload = function() {
+      context.decodeAudioData(request.response)
+        .then((buffer) => {
+          song = createSound(buffer, context)
+        })
+        .catch((err) => {
+          console.log(err)
+        })
+    }
+    request.send();
+  }
+
+  function createSound(buffer, context) {
+    var sourceNode = null,
+        scriptNode = null,
+        startedAt = 0,
+        pausedAt = 0,
+        playing = false;
+
+    var play = function() {
+      var offset = pausedAt;
+
+      sourceNode = context.createBufferSource();
+      sourceNode.connect(context.destination);
+      sourceNode.buffer = buffer;
+      sourceNode.start(0, offset);
+
+      scriptNode = context.createScriptProcessor(4096, context.numberOfChannels, context.numberOfChannels);
+      scriptNode.connect(context.destination);
+      scriptNode.onaudioprocess = () => {
+        console.log(sourceNode);
+      }
+      
+      startedAt = context.currentTime - offset;
+      pausedAt = 0;
+      playing = true;
+    };
+
+    var pause = function() {
+      var elapsed = context.currentTime - startedAt;
+      stop();
+      pausedAt = elapsed;
+      if (scriptNode) {
+        scriptNode.onaudioprocess = () => {}
+      }
+    };
+
+    var stop = function() {
+      if (sourceNode) {          
+        sourceNode.disconnect();
+        sourceNode.stop(0);
+        sourceNode = null;
+      }
+      pausedAt = 0;
+      startedAt = 0;
+      playing = false;
+    };
+
+    var getPlaying = function() {
+      return playing;
+    };
+
+    var getCurrentTime = function() {
+      if(startedAt) {
+        return context.currentTime - startedAt;
+      }
+      if(pausedAt) {
+        return pausedAt;
+      }
+      return 0;
+    };
+
+    var getDuration = function() {
+      return buffer.duration * 1000; // duration in milliseconds
+    };
+
+    return {
+      getCurrentTime: getCurrentTime,
+      getDuration: getDuration,
+      getPlaying: getPlaying,
+      play: play,
+      pause: pause,
+      stop: stop
+    };
+  }
+
+  function msToTime(s) {
+
+    // Pad to 2 digits
+    function pad(n) {
+      return ('00' + n).slice(-2);
+    }
+  
+    var ms = s % 1000;
+    s = (s - ms) / 1000;
+    var secs = s % 60;
+    s = (s - secs) / 60;
+    var mins = s % 60;
+    var hrs = (s - mins) / 60;
+  
+    return pad(hrs) + ':' + pad(mins) + ':' + pad(secs) + '.' + pad(ms);
+  }
+
+  function doStuff()  {
+    this.context.resume();
+    if (this.clicks === 0) {
+      this.clicks++;
+      console.log("Duration: " + msToTime(song.getDuration()));
+    }
+
+    var btn = document.getElementById('toggle');
+    if (btn.value === 'Start') {
+      song.play();
+      btn.value = 'Pause'
+    } else if (btn.value === 'Pause') {
+      song.pause()
+      btn.value = 'Start'
+    }
+  }
+</script> -->
