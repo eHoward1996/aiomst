@@ -17,7 +17,7 @@ func GetStream(c *gin.Context) {
 	c.Header("Accept-Ranges", "bytes")
 
 	// Attempt to load the song with matching ID
-	id, err := strconv.Atoi(c.Query("id"))
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		util.Logger.Print(err)
 		c.JSON(400, ErrGeneric)

@@ -41,7 +41,7 @@ func (s *SqlBackend) AllArtists() ([]Artist, error) {
 
 // AllArtistsByTitle loads a slice of all Artist structs from the database, sorted alphabetically by title
 func (s *SqlBackend) AllArtistsByTitle() ([]Artist, error) {
-	return s.artistQuery("SELECT * FROM artists ORDER BY title;")
+	return s.artistQuery("SELECT * FROM artists ORDER BY title COLLATE NOCASE;")
 }
 
 // LimitArtists loads a slice of Artist structs from the database using SQL limit, where the first parameter

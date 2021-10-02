@@ -9,27 +9,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AlbumResponse is what is returned to the frontend.
-type AlbumResponse struct {
-	Albums []db.Album `json:"albums"`
-	Songs  []db.Song  `json:"songs"`
-}
-
 // GetAlbums is the function called when a user accesses /albums on the frontend.
-func GetAlbums(c *gin.Context)	{
+func GetAlbums(c *gin.Context) {
 	c.Header("Content-Type", "application/json; charset=UTF-8")
 	c.Header("Access-Control-Allow-Origin", "*")
 	
-	sID := c.Query("id")
-	if sID == ""	{
-		handleAlbumNoID(c)
+	albums, err := db.DB.AllAlbumsByTitle()
+	if err != nil {
+		util.Logger.Print(err)
+		c.JSON(500, ErrGeneric)
 		return
 	}
-	handleAlbumID(sID, c)
+
+	c.IndentedJSON(200, albums)
 	return
 }
 
-func handleAlbumID(sID string, c *gin.Context)	{
+func GetAlbum(c *gin.Context)	{
+	c.Header("Content-Type", "application/json; charset=UTF-8")
+	c.Header("Access-Control-Allow-Origin", "*")
+
+	sID := c.Param("id")
 	id, err := strconv.Atoi(sID)
 	if err != nil {
 		util.Logger.Print(err)
@@ -44,9 +44,6 @@ func handleAlbumID(sID string, c *gin.Context)	{
 		return
 	}
 
-	resp := new(AlbumResponse)
-	resp.Albums = []db.Album{album}
-
 	songs, err := db.DB.SongsForAlbum(album.ID)
 	if err != nil {
 		util.Logger.Print(err)
@@ -54,22 +51,15 @@ func handleAlbumID(sID string, c *gin.Context)	{
 		return
 	}
 
-	resp.Songs = songs
-	c.IndentedJSON(200, resp)
-	return
-}
-
-func handleAlbumNoID(c *gin.Context)	{
-	albums, err := db.DB.AllAlbumsByTitle()
-	if err != nil {
-		util.Logger.Print(err)
-		c.JSON(500, ErrGeneric)
-		return
+	type AlbumResponse struct{
+		album db.Album   `json:"album"`
+		songs []db.Song  `json:"songs"`
 	}
 
-	resp := new(AlbumResponse)
-	resp.Albums = albums
-	resp.Songs = []db.Song{}
+	resp := AlbumResponse{
+		album: album,
+		songs: songs,
+	}
 	c.IndentedJSON(200, resp)
 	return
 }

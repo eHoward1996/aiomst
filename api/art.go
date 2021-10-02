@@ -18,7 +18,7 @@ import (
 // }
 
 func GetArt(c *gin.Context) {
-	sID := c.Query("id")
+	sID := c.Param("id")
 	if sID == "" {
 		return
 	}

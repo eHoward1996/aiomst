@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"fmt"
 	"strconv"
 
@@ -17,61 +16,10 @@ type ArtistResponse struct {
 	Songs 		[]db.Song  		`json:"songs"`
 }
 
-func GetArtist(c *gin.Context)	{
+func GetArtists(c *gin.Context)	{
 	c.Header("Content-Type", "application/json; charset=UTF-8")
 	c.Header("Access-Control-Allow-Origin", "*")
 	
-	sID := c.Query("id")
-	if sID == ""	{
-		handleArtistNoID(c)
-		return
-	}
-	handleArtistID(sID, c)
-}
-
-func handleArtistID(sID string, c *gin.Context)	{
-	id, err := strconv.Atoi(sID)
-	if err != nil {
-		util.Logger.Print(err)
-		c.JSON(400, "Invalid integer artist ID")
-		return
-	}
-
-	artist := db.Artist{ID: id}
-	if err := artist.Load(); err != nil {
-		if err == sql.ErrNoRows 	{
-			c.IndentedJSON(400, "Artist ID not found.")
-			return
-		}
-
-		util.Logger.Print(err)
-		c.JSON(500, serverErr)
-		return
-	}
-
-	resp := new(ArtistResponse)
-	resp.Artists = []db.Artist{artist}
-
-	albums, err := db.DB.AlbumsForArtist(artist.ID)
-	if err != nil {
-		util.Logger.Print(err)
-		c.IndentedJSON(500, serverErr)
-		return
-	}
-	resp.Albums = albums
-	
-	songs, err := db.DB.SongsForArtist(artist.ID)
-	if err != nil {
-		util.Logger.Print(err)
-		c.JSON(200, ErrGeneric)
-		return
-	}
-	resp.Songs = songs
-	c.IndentedJSON(200, resp)
-	return
-}
-
-func handleArtistNoID(c *gin.Context)	{
 	if limit := c.Query("limit"); limit != "" {
 		var offset, count int
 		if n, err := fmt.Sscanf(limit, "%d,%d", &offset, &count); n < 2 || err != nil {
@@ -97,10 +45,54 @@ func handleArtistNoID(c *gin.Context)	{
 		return
 	}
 
-	resp := new(ArtistResponse)
-	resp.Artists = artists
-	resp.Albums = []db.Album{}
-	resp.Songs = []db.Song{}
+	c.IndentedJSON(200, artists)
+}
+
+func GetArtist(c *gin.Context) {
+	c.Header("Content-Type", "application/json; charset=UTF-8")
+	c.Header("Access-Control-Allow-Origin", "*")
+
+	sID := c.Param("id")
+	util.Logger.Print(sID)
+	id, err := strconv.Atoi(sID)
+	if err != nil {
+		util.Logger.Print(err)
+		c.JSON(400, "Invalid integer artist ID")
+		return
+	}
+
+	artist := db.Artist{ID: id}
+	if err := artist.Load(); err != nil {
+		util.Logger.Print(err)
+		c.JSON(500, serverErr)
+		return
+	}
+
+	albums, err := db.DB.AlbumsForArtist(artist.ID)
+	if err != nil {
+		util.Logger.Print(err)
+		c.IndentedJSON(500, serverErr)
+		return
+	}
+	
+	songs, err := db.DB.SongsForArtist(artist.ID)
+	if err != nil {
+		util.Logger.Print(err)
+		c.JSON(200, ErrGeneric)
+		return
+	}
+	
+	type ArtistResponse struct {
+		Artist  	db.Artist  `json:"artist"`
+		Albums		[]db.Album `json:"albums"`
+		Songs 		[]db.Song  `json:"songs"`
+	}
+
+	resp := ArtistResponse{
+		Artist: artist,
+		Albums: albums,
+		Songs: songs,
+	}
 	c.IndentedJSON(200, resp)
 	return
 }
